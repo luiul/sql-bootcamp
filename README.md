@@ -26,9 +26,10 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [3.6. LIMIT Clause](#36-limit-clause)
   - [3.7. BETWEEN Operator](#37-between-operator)
   - [3.8. IN Operator](#38-in-operator)
-  - [3.9. LIKE and ILIKE Operatos & Pattern Matching](#39-like-and-ilike-operatos--pattern-matching)
-- [4. GROUP BY Statements](#4-group-by-statements)
-- [5. Misc](#5-misc)
+  - [3.9. LIKE and ILIKE Operators & Pattern Matching](#39-like-and-ilike-operators--pattern-matching)
+- [4. General Challenge 1](#4-general-challenge-1)
+- [5. GROUP BY Statements](#5-group-by-statements)
+- [6. Misc](#6-misc)
 
 <!-- update number, TOC -->
 
@@ -396,7 +397,7 @@ where first_name ilike 'heather_'
 -- does not return row with the first name 'Heather'
 ```
 
-We can combine operations and clauses to create more complex queries. 
+We can combine operations and clauses to create more complex queries.
 
 ```sql
 select * from customer
@@ -405,22 +406,56 @@ order by first_name
 -- return all customers whose name start with an 'A' and last name does not start with a 'B'. Order the results ascending by the first name. 
 ```
 
-# General Challenge 1
+# 4. General Challenge 1
 
-How many payment transaction were greater than $5.00? 
+How many payment transaction were greater than $5.00?
 
 ```sql
 select count(amount) from payment
 where amount > 5
 ```
 
+How many actors have a first name that starts with the letter P?
 
+```sql
+select count(first_name) from actor
+where first_name ilike 'p%'
+```
 
-# 4. GROUP BY Statements
+How many unique districts are our customers from?
+
+```sql
+select count(distinct(district)) from address
+-- where
+```
+
+Retrieve the list of names for those distinct districts from the previous question.
+
+```sql
+select distinct(district) from address
+-- where
+```
+
+How many films have a rating of R and a replacement cost between $5 and $15? ([*](https://xzilla.net/blog/2007/Sep/PostgreSQL-8.3-Features-Enum-Datatype.html))
+
+```sql
+select count(title) from film
+where rating = 'R' and replacement_cost between 5 and 15
+-- note that rating is mpaa_rating data type 
+```
+
+How many films have the word Truman somewhere in the title?
+
+```sql
+select count(title) from film
+where title ilike '%truman%'
+```
+
+# 5. GROUP BY Statements
 
 Continue here!
 
-# 5. Misc
+# 6. Misc
 
 Misc notes:
 

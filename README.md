@@ -28,7 +28,9 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [3.8. IN Operator](#38-in-operator)
   - [3.9. LIKE and ILIKE Operators & Pattern Matching](#39-like-and-ilike-operators--pattern-matching)
 - [4. General Challenge 1](#4-general-challenge-1)
-- [5. GROUP BY Statements](#5-group-by-statements)
+- [5. GROUP BY Statements & Aggregate Functions](#5-group-by-statements--aggregate-functions)
+  - [5.1. Aggregation Functions - AVG, COUNT, MAX, MIN and SUM](#51-aggregation-functions---avg-count-max-min-and-sum)
+  - [5.2. GROUP BY Statement](#52-group-by-statement)
 - [6. Misc](#6-misc)
 
 <!-- update number, TOC -->
@@ -451,9 +453,98 @@ select count(title) from film
 where title ilike '%truman%'
 ```
 
-# 5. GROUP BY Statements
+# 5. GROUP BY Statements & Aggregate Functions
 
-Continue here!
+`group by` will allow us to aggregate data and apply functions to better understand how data is distributed per category.
+
+Overview:
+
+- Aggregate Functions
+- GROUP BY Statement
+  - Theory
+  - Implementation
+- Challenge Tasks for GROUP BY
+- HAVING - Filtering with a GROUP BY
+- Challenge Tasks for HAVING
+
+## 5.1. Aggregation Functions - AVG, COUNT, MAX, MIN and SUM
+
+The main idea behind an aggregate function is to take multiple inputs and return a single output (stat). PgSQL aggregate functions can be found in the [documentation](https://www.postgresql.org/docs/13/functions-aggregate.html).
+
+Most common aggregate functions:
+
+- `avg()` returns average value
+- `count()` returns number of values
+- `max()` returns maximum value
+- `min()` returns minimum value
+- `sum()` returns the sum of all values
+
+Aggregate function calls happen only in the `select` statement or `having` clause!
+
+Special notes:
+
+- `avg()` returns a floating point value with many decimal places (e.g. 2.342418..)
+  - You can use `round()` to specify precision after the decimal
+- `count()` simply returns the number of rows, which means by convention we just use `count(*)`
+
+Calling an aggregate function returns a single value, which cannot be returned with another column. In order to call other columns we need the `group by` statement. It is possible to return multiple single values in one query. For example:
+
+```sql
+select min(replacement_cost), max(replacement_cost) from film
+```
+
+We can calculate the average cost:
+
+```sql
+select round(avg(replacement_cost),2) from film
+```
+
+## 5.2. GROUP BY Statement
+
+The `group by` statement allows us to aggregate columns per some category. We need to choose a categorical column to `group by`. Categorical columns are non-continuous. Keep in mind, they can still be numerical, such as cabin class categories on a ship (e.g. Class 1, Class 2, Class 3)
+
+After choosing the categorical column we're essentially **splitting** the table up on a per category basis in n subtables. We can then **aggregate** the columns in the subtables with an aggregate function. Basic syntax:
+
+```sql
+select cat_col, "agg"(data_col) from t1
+where cat_col != 'A'
+group by cat_col
+-- "agg" is a placeholder for some aggregate function
+-- the GROUP BY statement must appear right after the FROM or WHERE statement
+```
+
+Note that the `group by` statement must appear right after the `from` or `where` statement. 
+
+In the `select` statement, columns must either have an aggregate function OR be in a `group by` call. Example: 
+
+```sql
+select company, division, sum(sales)
+-- sales won't appear in GROUP BY so we need an aggregate function to select it
+from finance_table
+group by company, division
+-- this return the total number of sales per division per company 
+```
+
+We can also add a `where` statement to the query. `where` statements should not refer to the aggregation result. Later on we'll use the `having` clause to filter on those results. The `having` clause was added to SQL because the `where` keyword cannot be used with aggregate functions. Example: 
+
+```sql
+select company, division, sum(sales)
+from finance_table
+where division in ('marketing', 'transport')
+-- where cannot be used with aggregate function
+group by company, division
+```
+
+If we want to sort results based on the aggregate, we must reference the entire function. Example: 
+
+```sql
+select company, sum(sales)
+from finance_table
+group by company 
+order by sum(sales) desc
+limit 5
+-- returns top 5 companies based on total sales
+```
 
 # 6. Misc
 
@@ -477,3 +568,9 @@ select * from "table1" where "column1"='name1';
 - [PgSQL Pattern Matching](https://www.postgresql.org/docs/13/functions-matching.html): Be wary of accepting regular-expression search patterns from hostile sources. If you must do so, it is advisable to impose a statement timeout.  
 Searches using `SIMILAR TO` patterns have the same security hazards, since `SIMILAR TO` provides many of the same capabilities as POSIX-style regular expressions.  
 `LIKE` searches, being much simpler than the other two options, are safer to use with possibly-hostile pattern sources.
+- [W3 SQL Tutorial](https://www.w3schools.com/sql/default.asp)
+- [Full Text Search PostgreSQL](https://www.youtube.com/watch?v=szfUbzsKvtE)
+- [Learn PostgreSQL Tutorial - Full Course for Beginners](https://www.youtube.com/watch?v=qw--VYLpxG4)
+- [Official Tutorials and Other Resources](https://www.postgresql.org/docs/online-resources/)
+- [EDB Offer](https://www.enterprisedb.com/training/free-postgres-training)
+- [tutorials point](https://www.tutorialspoint.com/postgresql/)

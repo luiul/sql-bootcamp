@@ -31,6 +31,7 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
 - [5. GROUP BY Statements & Aggregate Functions](#5-group-by-statements--aggregate-functions)
   - [5.1. Aggregation Functions - AVG, COUNT, MAX, MIN and SUM](#51-aggregation-functions---avg-count-max-min-and-sum)
   - [5.2. GROUP BY Statement](#52-group-by-statement)
+  - [5.3. HAVING Clause](#53-having-clause)
 - [6. Misc](#6-misc)
 
 <!-- update number, TOC -->
@@ -513,9 +514,9 @@ group by cat_col
 -- the GROUP BY statement must appear right after the FROM or WHERE statement
 ```
 
-Note that the `group by` statement must appear right after the `from` or `where` statement. 
+Note that the `group by` statement must appear right after the `from` or `where` statement.
 
-In the `select` statement, columns must either have an aggregate function OR be in a `group by` call. Example: 
+In the `select` statement, columns must either have an aggregate function OR be in a `group by` call. Example:
 
 ```sql
 select company, division, sum(sales)
@@ -525,7 +526,7 @@ group by company, division
 -- this return the total number of sales per division per company 
 ```
 
-We can also add a `where` statement to the query. `where` statements should not refer to the aggregation result. Later on we'll use the `having` clause to filter on those results. The `having` clause was added to SQL because the `where` keyword cannot be used with aggregate functions. Example: 
+We can also add a `where` statement to the query. `where` statements should not refer to the aggregation result. Later on we'll use the `having` clause to filter on those results. The `having` clause was added to SQL because the `where` keyword cannot be used with aggregate functions. Example:
 
 ```sql
 select company, division, sum(sales)
@@ -535,7 +536,7 @@ where division in ('marketing', 'transport')
 group by company, division
 ```
 
-If we want to sort results based on the aggregate, we must reference the entire function. Example: 
+If we want to sort results based on the aggregate, we must reference the entire function. Example:
 
 ```sql
 select company, sum(sales)
@@ -546,7 +547,228 @@ limit 5
 -- returns top 5 companies based on total sales
 ```
 
-# 6. Misc
+Examples:
+
+```sql
+select customer_id from payment
+group by customer_id
+
+-- the result is the same as SELECT distinct(customer_id) FROM payment
+```
+
+We want to find out what customer spent the most money:
+
+```sql
+select customer_id, sum(amount) from payment
+group by customer_id
+order by sum(amount) desc
+-- this can be read as total sum amount per customer id
+```
+
+We want to find out how many transaction occurred per customer:
+
+```sql
+select customer_id, count(amount) from payment
+group by customer_id
+order by count(amount) desc
+```
+
+We want to find out the sum amount per customer per staff member:
+
+```sql
+select staff_id, customer_id, sum(amount) from payment
+group by staff_id, customer_id
+order by staff_id, customer_id
+```
+
+We want to find out the date with the most sum amount:
+
+```sql
+select date(payment_date), sum(amount) from payment
+group by date(payment_date)
+order by sum(amount) desc
+-- note that the payment_date is a timestamp -> we remove the time with the date() function
+```
+
+**Challenge**: We have two staff members, with Staff IDs 1 and 2. We want to give a bonus to the staff member that handled the most payments. (Most in terms of number of payments processed, not total dollar amount). How many payments did each staff member handle and who gets the bonus?
+
+```sql
+select staff_id, count(payment_id) from payment
+group by staff_id
+```
+
+**Challenge**: Corporate HQ is conducting a study on the relationship between replacement cost and a movie MPAA rating. What is the average replacement cost per MPAA rating?
+
+```sql
+select rating, round(avg(replacement_cost),2)
+from film
+group by rating
+order by avg(replacement_cost) desc
+```
+
+**Challenge**: We are running a promotion to reward our top 5 customers with coupons. What are the customer ids of the top 5 customers by total spend?
+
+```sql
+select customer_id, round(sum(amount),2)
+from payment 
+group by customer_id
+order by sum(amount) desc
+limit 5
+```
+
+## 5.3. HAVING Clause
+
+The `having` clause allows us to filter after an aggregation has already taken place. Example:
+
+```sql
+select company, sum(sales)
+from finance_table
+where company != 'Google'
+group by company
+having sum(sales) > 1000
+```
+
+Here we're aggregating sales per company. We can filter before executing the `group by` statement, since it's not being aggregated. We can not use `where` to filter based off of aggregate results, because the pgSQL aggregates after the `where` clause is executed. An additional filtering using aggregated results can be done with the `having` clause. Example:
+
+```sql
+select customer_id, sum(amount) 
+from payment
+-- we remove some arbitrary customers by id
+where customer_id not in (184,87,477)
+group by customer_id
+having sum(amount) > 150
+order by sum(amount) desc 
+-- the restul is the records of the customer_id and sum amount, excluding some customers and where (having clause) the aggregated sum amount is bigger than 150, ordered by the descending sum amount
+```
+
+Example:
+
+```sql
+-- number of customer per store
+select store_id, count(customer_id)
+from customer
+group by store_id
+```
+
+We can expand on this example. We want to see the number of customer per store in stores that have more than 300 customers.
+
+```sql
+-- number of customer per store with more than 300 customers
+select store_id, count(customer_id)
+from customer
+group by store_id
+having count(customer_id) >= 300
+```
+
+**Challenge**: We are launching a platinum service for our most loyal customers. We will assign platinum status to customers that have had 40 or more transaction payments. What customer_ids are eligible for platinum status?
+
+```sql
+select customer_id, count(*)
+from payment
+group by customer_id
+having count(*) >= 40
+```
+
+**Challenge**: What are the customer ids of customers who have spent more than $100 in payment transactions with our staff_id member 2?
+
+```sql
+select staff_id, customer_id, sum(amount)
+from payment
+where staff_id = 2
+group by staff_id, customer_id
+having sum(amount) > 100
+```
+
+# 6. Assessment Test 1
+
+Return the customer IDs of customers who have spent at least $110 with the staff member who has an ID of 2.
+
+```sql
+select staff_id, customer_id, sum(amount)
+from payment
+where staff_id = 2
+group by staff_id, customer_id
+having sum(amount) > 110
+```
+
+How many films begin with the letter J?
+
+```sql
+select count(title)
+from film
+where title like 'J%'
+```
+
+What customer has the highest customer ID number whose name starts with an 'E' and has an address ID lower than 500?
+
+```sql
+select customer_id, first_name, last_name
+from customer
+where first_name like 'E%' and address_id < 500
+order by customer_id desc
+limit 1
+```
+
+# 7. JOIN Clause
+
+JOINS will allow us to combine information from multiple tables.
+
+Overview:
+
+- Creating an alias with the `as` clause
+- Understanding the different kinds of `join`
+  - `inner join`
+  - `outer join`
+  - `full join`
+  - `union`
+- Challenge Task
+
+## 7.1. Aliases: AS Clause
+
+Aliases are used to give a table, a column in a table or result, a temporary name. Basic syntax:
+
+```sql
+select c1 as new_c1_name
+from t1
+```
+
+```sql
+select sum(c1) as new_c1_name
+from t1
+-- useful for readability of the data output
+```
+
+The `as` operator gets executed at the very end of a query, meaning that we can not use the alies inside a `where` operator. This means the alias is only valid in the `select` statement. Example:
+
+```sql
+select count(amount) as "Number of Transactions"
+from payment
+```
+
+```sql
+select customer_id, sum(amount) as "Total Spent"
+from payment
+group by customer_id
+having sum(amount) > 150
+-- using "Total Spent" in the having clause returns an error because "Total Spen" does not exist (alias gets assigned at the very end)
+```
+
+# 8. INNER JOIN Keyword
+
+JOINs allow us to combine multiple tables together. The main reason for the different JOIN types is to decide how to deal with information only present in **one** of the joined tables.
+
+The `inner join` keyword selects records that have matching values in both tables. Basis syntax:
+
+```sql
+select order.order_id, customer.first_name
+from order
+-- from customer
+inner join customer on order.customer_id = customer.customer_id
+-- inner join order ... 
+-- the inner join is symmetrical, so here the order does not matter
+```
+
+# 9. Misc
 
 Misc notes:
 
@@ -573,4 +795,14 @@ Searches using `SIMILAR TO` patterns have the same security hazards, since `SIMI
 - [Learn PostgreSQL Tutorial - Full Course for Beginners](https://www.youtube.com/watch?v=qw--VYLpxG4)
 - [Official Tutorials and Other Resources](https://www.postgresql.org/docs/online-resources/)
 - [EDB Offer](https://www.enterprisedb.com/training/free-postgres-training)
-- [tutorials point](https://www.tutorialspoint.com/postgresql/)
+- [Tutorials point](https://www.tutorialspoint.com/postgresql/)
+- [Show all tables](https://www.postgresqltutorial.com/postgresql-show-tables/):  
+
+```sql
+SELECT * FROM pg_catalog.pg_tables
+WHERE schemaname != 'pg_catalog' AND
+      schemaname != 'information_schema';
+```
+
+- [A Visual Explanation of SQL Joins](https://blog.codinghorror.com/a-visual-explanation-of-sql-joins/)
+- [Join (SQL) Wiki](https://en.wikipedia.org/wiki/Join_(SQL))

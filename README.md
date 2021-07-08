@@ -32,7 +32,11 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [5.1. Aggregation Functions - AVG, COUNT, MAX, MIN and SUM](#51-aggregation-functions---avg-count-max-min-and-sum)
   - [5.2. GROUP BY Statement](#52-group-by-statement)
   - [5.3. HAVING Clause](#53-having-clause)
-- [6. Misc](#6-misc)
+- [6. Assessment Test 1](#6-assessment-test-1)
+- [7. JOIN Clause](#7-join-clause)
+  - [7.1. Aliases: AS Clause](#71-aliases-as-clause)
+- [8. INNER JOIN Keyword](#8-inner-join-keyword)
+- [9. Misc](#9-misc)
 
 <!-- update number, TOC -->
 

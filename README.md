@@ -35,7 +35,16 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
 - [6. Assessment Test 1](#6-assessment-test-1)
 - [7. JOIN Clause](#7-join-clause)
   - [7.1. Aliases: AS Clause](#71-aliases-as-clause)
-- [8. INNER JOIN Keyword](#8-inner-join-keyword)
+  - [7.2. INNER JOIN Keyword (Intersection)](#72-inner-join-keyword-intersection)
+  - [7.3. FULL (OUTER) JOIN Keyword (Union and Symmetric Difference)](#73-full-outer-join-keyword-union-and-symmetric-difference)
+  - [7.4. LEFT (OUTER) JOIN Keyword (A)](#74-left-outer-join-keyword-a)
+  - [7.5. RIGHT (OUTER) JOIN Keyword (B)](#75-right-outer-join-keyword-b)
+  - [7.6. UNION Operator](#76-union-operator)
+  - [7.7. JOIN Challenges](#77-join-challenges)
+- [8. Advanced SQL Commands](#8-advanced-sql-commands)
+  - [8.1. Timestamps and Extract](#81-timestamps-and-extract)
+    - [8.1.1. Displaying Current Time Information](#811-displaying-current-time-information)
+    - [8.1.2. Extracting Time and Date Information](#812-extracting-time-and-date-information)
 - [9. Misc](#9-misc)
 
 <!-- update number, TOC -->
@@ -715,7 +724,7 @@ limit 1
 
 # 7. JOIN Clause
 
-JOINS will allow us to combine information from multiple tables.
+JOINS will allow us to combine information from multiple tables. See [documentation](https://www.postgresql.org/docs/9.2/queries-table-expressions.html).
 
 Overview:
 
@@ -757,7 +766,7 @@ having sum(amount) > 150
 -- using "Total Spent" in the having clause returns an error because "Total Spen" does not exist (alias gets assigned at the very end)
 ```
 
-# 8. INNER JOIN Keyword
+## 7.2. INNER JOIN Keyword (Intersection)
 
 JOINs allow us to combine multiple tables together. The main reason for the different JOIN types is to decide how to deal with information only present in **one** of the joined tables.
 
@@ -768,8 +777,415 @@ select order.order_id, customer.first_name
 from order
 -- from customer
 inner join customer on order.customer_id = customer.customer_id
+-- in this syntax, the INNER keyword is optional
 -- inner join order ... 
--- the inner join is symmetrical, so here the order does not matter
+-- the inner join is symmetrical: the order of the tables does not matter
+```
+
+**Result**:
+
+| set      | id_A | id_B |
+|---------|------|------|
+| A ∩ B | ...  | ...  |
+
+If we just use `join` without the `inner`, PgSQL will treat it as an `inner join`.
+
+Example: we want to join the payment and customer table.
+
+```sql
+select payment.payment_id, payment.customer_id, customer.email
+from payment
+inner join customer on payment.customer_id = customer.customer_id
+-- this shows only customer that have done a payment
+```
+
+The words `inner` and `outer` are optional in all forms. `inner` is the default; `left`, `right`, and `full` imply an outer join.
+
+## 7.3. FULL (OUTER) JOIN Keyword (Union and Symmetric Difference)
+
+There are few different types of OUTER JOINs. They will allow us to specify how to deal with values only present in one of the tables being joined. We will explain:
+
+- `full outer join`
+  - clarifying `where null`
+- `left outer join`
+  - clarifying `where null`
+- `right outer join`
+  - clarifying `where null`
+
+Basic syntax of `full outer join`:
+
+```sql
+select * from order
+full outer join customer
+-- in this syntax, the OUTER keyword is optional
+on order.customer_id = customer.customer_id
+-- a full outer join is symmetrical: the order of the tables does not matter
+```
+
+**Result**:
+
+| set     | id_A | id_B |
+|---------|------|------|
+| A ∩ B | ...  | ...  |
+| A \ B   | ...  | NULL |
+| B \ A   | NULL | ...  |
+
+We can further qualify the statement with a `full outer join` with `where` (and the help of `null` values): get rows unique to either table (rows not found in both tables), i.e. a XOR join (opposite of INNER join):
+
+```sql
+select * from order
+full outer join customer
+-- in this syntax, the OUTER keyword is optional
+on order.customer_id = customer.customer_id
+where order.customer_id is null or customer.customer_id is null
+-- a full outer join with a symmetrical where clause is symmtrical
+```
+
+**Result**:
+
+| set     | id_A | id_B |
+|---------|------|------|
+| A \ B   | ...  | NULL |
+| B \ A   | NULL | ...  |
+
+Example:
+
+```sql
+select * 
+from customer
+full outer join payment
+on customer.customer_id = payment.customer_id
+where customer.customer_id is null or payment.customer_id is null 
+
+-- we want to return (a) customer ids that are not present in the payment table (customer without historical payment data) and (b) customer ids that are not present in the customer table, but have done payments -> no customer has this property -> we're in compliance with this policy
+```
+
+## 7.4. LEFT (OUTER) JOIN Keyword (A)
+
+A `left outer join` results the set of records that are in the left table, if there is no match with the right table, the results are null.
+
+```sql
+select * from order
+left outer join customer
+-- in this syntax, the OUTER keyword is optional
+on order.customer_id = customer.customer_id
+-- a left outer join is not symmetrical!
+```
+
+**Result**:
+
+| set   | id_A | id_B |
+|-------|------|------|
+| A ∩ B | ...  | ...  |
+| A     | ...  | NULL |
+
+We can further qualify the statement with a `full left join` with `where` (and the help of `null` values): get rows unique to left table. What if we only wanted entries unique to Table A? Those rows found Table A and not found in Table B.
+
+```sql
+select * from order
+left outer join customer
+-- in this syntax, the OUTER keyword is optional
+on order.customer_id = customer.customer_id
+where customer.customer_id is null
+-- a left outer join is not symmetrical!
+```
+
+**Result**:
+
+| set   | id_A | id_B |
+|-------|------|------|
+| A     | ...  | NULL |
+
+Example:
+
+```sql
+select film.film_id, inventory.film_id, film.title, inventory.inventory_id
+-- select count(distinct(film.film_id))
+-- select count(distinct(inventory.film_id))
+from film
+left join inventory on film.film_id = inventory.film_id
+-- there are 958 distinct films IDs in our inventory and 1000 distinct films on the film table
+```
+
+We return all films in the film table, even if they're not present in the inventory table. We can use the `null` values generated to identify films that are not in our inventory:
+
+```sql
+select film.film_id, inventory.film_id, film.title, inventory.inventory_id
+-- select count(distinct(film.film_id))
+-- select count(distinct(inventory.film_id))
+from film
+left join inventory on film.film_id = inventory.film_id
+-- there are 958 distinct films IDs in our inventory and 1000 distinct films on the film table
+where inventory.film_id is null
+-- this returns the films that are in our films table but not in our inventory
+```
+
+## 7.5. RIGHT (OUTER) JOIN Keyword (B)
+
+A `right join` is essentially the same as a `left join`, except the tables are switched. This would be the same as switching the table order in `left join`.
+
+```sql
+select * from order
+right outer join customer
+-- in this syntax, the OUTER keyword is optional
+on order.customer_id = customer.customer_id
+-- a right outer join is not symmetrical!
+```
+
+**Result**:
+
+| set   | id_A | id_B |
+|-------|------|------|
+| A ∩ B | ...  | ...  |
+| B     | NULL  | ... |
+
+We can add a `where` qualifier:
+
+```sql
+select * from order
+right outer join customer
+-- in this syntax, the OUTER keyword is optional
+on order.customer_id = customer.customer_id
+where order.customer_id is null
+-- a right outer join is not symmetrical!
+```
+
+**Result**:
+
+| set   | id_A | id_B |
+|-------|------|------|
+| B     | NULL  | ... |
+
+## 7.6. UNION Operator
+
+The `union` operator is used to combine the result-set of two or more `select` statements.
+
+- Every `select` statement within `union` must have the same number of columns
+- The columns must also have similar data types
+- The columns in every `select` statement must also be in the same order
+
+It basically serves to directly concatenate two results together, essentially "pasting" them together. Basic syntax:
+
+```sql
+select c_1,...,c_n from t1
+union
+select c_1,...,c_n from t2
+```
+
+**Result**:
+
+| col_1   | col_2   |
+|---------|---------|
+| A.col_1 | A.col_2 |
+| B.col_2 | B.col_2 |
+
+## 7.7. JOIN Challenges
+
+**Challenge**: California sales tax laws have changed and we need to alert our customers to this through email. What are the emails of the customers who live in California?
+
+```sql
+-- task: what are the emails of the customers that live in California
+-- California is a district in the address table
+
+select customer.first_name, customer.last_name, customer.email, address.district
+from customer
+right join address on customer.address_id = address.address_id
+where address.district = 'California'
+
+-- this query returns the same information if we perform an inner join; we perform a right join to make sure that there is no person in California that does not have an email in the database
+```
+
+**Challenge**: A customer walks in and is a huge fan of the actor "Nick Wahlberg" and wants to know which movies he is in. Get a list of all the movies "Nick Wahlberg" has been in.
+
+```sql
+-- task: get all Nick Wahlberg movies
+-- tables: film for the title, film_actor for relationship, actor for first and last name
+
+select actor.first_name, actor.last_name, film.title
+from actor
+join film_actor
+ on actor.actor_id = film_actor.actor_id
+join film
+ on film.film_id = film_actor.film_id
+where actor.first_name = 'Nick' and actor.last_name = 'Wahlberg'
+```
+
+# 8. Advanced SQL Commands
+
+Section Overview:
+
+- Timestamps and EXTRACT
+- Math Functions
+- String Functions
+- Sub-query
+- Self-Join
+
+## 8.1. Timestamps and Extract
+
+### 8.1.1. Displaying Current Time Information
+
+In Part One, we will go over a few commands that report back time and date information. These will be more useful when creating our own tables and databases, rather than when querying a database.
+
+We've already seen that PostgreSQL can hold date and time information:
+
+- `time` Contains only time
+- `date` Contains only date
+- `timestamp` Contains date and time
+- `timestamptz` Contains date,time, and timezone
+
+Careful considerations should be made when designing a table and database and choosing a time data type. Depending on the situation you may or may not need the full level of `timestamptz`. Remember, you can always remove historical information, but you can't add it.
+
+Let's explore functions and operations related to these specific data types:
+
+- `timezone`
+- `now`
+- `timeofday`
+- `current_time`
+- `current_date`
+
+We use the [`show`](https://www.postgresql.org/docs/current/sql-show.html) function:
+
+```sql
+-- show all
+-- show timezone
+-- show runtime parameters
+
+-- select now()
+-- return timestamp
+
+-- select timeofday()
+-- return string representation of timestamp
+
+-- select current_time
+-- return time with timezone
+
+-- select current_date
+-- return date
+
+```
+
+### 8.1.2. Extracting Time and Date Information
+
+Let's explore extracting information from a time based data type using:
+
+- `extract()`
+- `age()`
+- `to_char()`
+
+`extract(field FROM source)` allows you to "extract" or obtain a sub-component of a date value. Valid values for field can be found in the [documentation](https://www.postgresql.org/docs/13/functions-datetime.html).
+
+Syntax:
+
+```sql
+extract(year from date_col)
+```
+
+In a full query it becomes:
+
+```sql
+-- select date_col becomes
+select extract(year from date_col)
+from t1
+```
+
+Example:
+
+```sql
+select extract(month from payment_date) as "Month"
+from payment
+group by extract(month from payment_date) 
+-- we can extract: year, quarter, month, week, day
+```
+
+`age()` calculates and returns the current age given a timestamp. Basic syntax:
+
+```sql
+age(date_col)
+-- return for example: 13 years mon 5 days 01:34:13.003423
+```
+
+Example:
+
+```sql
+select age(payment_date)
+from payment
+```
+
+`to_char()` general function to convert data types to text (see [Documentation](https://www.postgresql.org/docs/current/functions-formatting.html)). Useful for timestamp formattin. Basic syntax:
+
+```sql
+to_char(date_col, 'mm-dd-yyyy')
+```
+
+Example:
+
+```sql
+select to_char(payment_date,'MM/dd/YYYY')
+from payment
+```
+
+**Challenge**: During which months did payments occur? Format your answer to return back the full month name.
+
+```sql
+-- task: during which month did payments occur? 
+
+-- select extract(month from payment_date) <- this returns the months as a number
+select to_char(payment_date, 'Month')
+from payment
+group by to_char(payment_date, 'Month')
+```
+
+Alternative:
+
+```sql
+select distinct(to_char(payment_date, 'Month'))
+from payment
+```
+
+Alternative (ordering the month chronologically):
+
+```sql
+-- task: during which month did payments occur? 
+
+select distinct(extract(month from payment_date)) as "num_month", to_char(payment_date, 'Month')
+from payment
+order by "num_month"
+```
+
+Alternative (without the alias):
+
+```sql
+select distinct(extract(month from payment_date)), to_char(payment_date, 'Month')
+from payment
+order by date_part
+```
+
+**Challenge**: How many payments occurred on a Monday?
+
+```sql
+-- task: how many payments occured on a monday? 
+
+select to_char(payment_date, 'day') as weekday, count(*)
+from payment
+group by weekday
+-- this returns the list of weekday and it's corresponding number of payments
+```
+
+```sql
+select extract(dow from payment_date), count(*)
+from payment
+where extract(dow from payment_date) = 1
+group by date_part
+
+-- for dow sunday (0) -> monday (1)
+```
+
+Alternative (more compact):
+
+```sql
+select count(*)
+from payment
+where extract(dow from payment_date) = 1
 ```
 
 # 9. Misc
@@ -810,3 +1226,5 @@ WHERE schemaname != 'pg_catalog' AND
 
 - [A Visual Explanation of SQL Joins](https://blog.codinghorror.com/a-visual-explanation-of-sql-joins/)
 - [Join (SQL) Wiki](https://en.wikipedia.org/wiki/Join_(SQL))
+- [Table Covert Online](https://tableconvert.com/)
+- [Math Symbols List](https://www.rapidtables.com/math/symbols/Basic_Math_Symbols.html)

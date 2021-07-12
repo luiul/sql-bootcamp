@@ -45,7 +45,15 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [8.1. Timestamps and Extract](#81-timestamps-and-extract)
     - [8.1.1. Displaying Current Time Information](#811-displaying-current-time-information)
     - [8.1.2. Extracting Time and Date Information](#812-extracting-time-and-date-information)
-- [9. Misc](#9-misc)
+  - [8.2. Mathematical Functions and Operators](#82-mathematical-functions-and-operators)
+  - [8.3. String Functions and Operators](#83-string-functions-and-operators)
+  - [8.4. Subquery](#84-subquery)
+  - [8.5. Self-Join](#85-self-join)
+- [9. Assessment Test 2](#9-assessment-test-2)
+- [10. Creating Databases and Tables](#10-creating-databases-and-tables)
+  - [10.1. Data Types](#101-data-types)
+  - [10.2. Primary and Foreign Key](#102-primary-and-foreign-key)
+- [11. Misc](#11-misc)
 
 <!-- update number, TOC -->
 
@@ -766,6 +774,8 @@ having sum(amount) > 150
 -- using "Total Spent" in the having clause returns an error because "Total Spen" does not exist (alias gets assigned at the very end)
 ```
 
+Note: column aliases are for better readability of the output, whereas table aliases are for better readability and structuring of the query.
+
 ## 7.2. INNER JOIN Keyword (Intersection)
 
 JOINs allow us to combine multiple tables together. The main reason for the different JOIN types is to decide how to deal with information only present in **one** of the joined tables.
@@ -784,8 +794,8 @@ inner join customer on order.customer_id = customer.customer_id
 
 **Result**:
 
-| set      | id_A | id_B |
-|---------|------|------|
+| set   | id_A | id_B |
+| ----- | ---- | ---- |
 | A ∩ B | ...  | ...  |
 
 If we just use `join` without the `inner`, PgSQL will treat it as an `inner join`.
@@ -824,11 +834,11 @@ on order.customer_id = customer.customer_id
 
 **Result**:
 
-| set     | id_A | id_B |
-|---------|------|------|
+| set   | id_A | id_B |
+| ----- | ---- | ---- |
 | A ∩ B | ...  | ...  |
-| A \ B   | ...  | NULL |
-| B \ A   | NULL | ...  |
+| A \ B | ...  | NULL |
+| B \ A | NULL | ...  |
 
 We can further qualify the statement with a `full outer join` with `where` (and the help of `null` values): get rows unique to either table (rows not found in both tables), i.e. a XOR join (opposite of INNER join):
 
@@ -843,10 +853,10 @@ where order.customer_id is null or customer.customer_id is null
 
 **Result**:
 
-| set     | id_A | id_B |
-|---------|------|------|
-| A \ B   | ...  | NULL |
-| B \ A   | NULL | ...  |
+| set   | id_A | id_B |
+| ----- | ---- | ---- |
+| A \ B | ...  | NULL |
+| B \ A | NULL | ...  |
 
 Example:
 
@@ -875,7 +885,7 @@ on order.customer_id = customer.customer_id
 **Result**:
 
 | set   | id_A | id_B |
-|-------|------|------|
+| ----- | ---- | ---- |
 | A ∩ B | ...  | ...  |
 | A     | ...  | NULL |
 
@@ -892,9 +902,9 @@ where customer.customer_id is null
 
 **Result**:
 
-| set   | id_A | id_B |
-|-------|------|------|
-| A     | ...  | NULL |
+| set | id_A | id_B |
+| --- | ---- | ---- |
+| A   | ...  | NULL |
 
 Example:
 
@@ -935,9 +945,9 @@ on order.customer_id = customer.customer_id
 **Result**:
 
 | set   | id_A | id_B |
-|-------|------|------|
+| ----- | ---- | ---- |
 | A ∩ B | ...  | ...  |
-| B     | NULL  | ... |
+| B     | NULL | ...  |
 
 We can add a `where` qualifier:
 
@@ -952,9 +962,9 @@ where order.customer_id is null
 
 **Result**:
 
-| set   | id_A | id_B |
-|-------|------|------|
-| B     | NULL  | ... |
+| set | id_A | id_B |
+| --- | ---- | ---- |
+| B   | NULL | ...  |
 
 ## 7.6. UNION Operator
 
@@ -975,7 +985,7 @@ select c_1,...,c_n from t2
 **Result**:
 
 | col_1   | col_2   |
-|---------|---------|
+| ------- | ------- |
 | A.col_1 | A.col_2 |
 | B.col_2 | B.col_2 |
 
@@ -1072,9 +1082,7 @@ Let's explore extracting information from a time based data type using:
 - `age()`
 - `to_char()`
 
-`extract(field FROM source)` allows you to "extract" or obtain a sub-component of a date value. Valid values for field can be found in the [documentation](https://www.postgresql.org/docs/13/functions-datetime.html).
-
-Syntax:
+`extract(field FROM source)` allows you to "extract" or obtain a sub-component of a date value. Valid values for field can be found in the [documentation](https://www.postgresql.org/docs/13/functions-datetime.html).Basic syntax:
 
 ```sql
 extract(year from date_col)
@@ -1188,7 +1196,527 @@ from payment
 where extract(dow from payment_date) = 1
 ```
 
-# 9. Misc
+## 8.2. Mathematical Functions and Operators
+
+See [documentation](https://www.postgresql.org/docs/current/functions-math.html). Examples:
+
+```sql
+-- mathematical functions and operators: we will focus on rental_rate and replacement_cost
+
+select round(rental_rate/replacement_cost*100,2) as "percent_cost"
+from film
+```
+
+```sql
+select round(0.1*replacement_cost,2) as deposit
+from film
+```
+
+## 8.3. String Functions and Operators
+
+See [documentation](https://www.postgresql.org/docs/13/functions-string.html). PostgreSQL also provides a variety of string functions and operators that allow us to edit, combine, and alter text data columns. Examples:
+
+```sql
+select length(first_name) from customer
+-- returns the length of the first_name of every record
+```
+
+```sql
+select first_name || ' ' || last_name as full_name
+from customer
+-- concatenate text
+```
+
+```sql
+select upper(first_name) || ' ' || upper(last_name) as full_name
+from customer
+-- concatenate text
+-- use lower, upper or initcap functions to convert a string expression, values in a column, etc., to lowercase, uppercase, and proper case.
+```
+
+```sql
+-- task: create email for customer
+
+select lower(left(first_name,1)) || '_' || lower(last_name) || '@mail.com' as customer_email
+from customer
+
+-- using string functions and operators to create a new column that is useful for a certain situation
+```
+
+## 8.4. Subquery
+
+See [documentation](https://www.postgresql.org/docs/13/functions-subquery.html). We discuss how to perform a subquery and the `exists` function.
+
+A sub query allows you to construct complex queries, essentially performing a query on the results of another query. The syntax is straightforward and involves two `select` statements. Example:
+
+```sql
+select student, grade
+from test_score 
+-- return the data for all the students
+```
+
+```sql
+select avg(grade)
+from test_score
+-- returns the average score for the test
+```
+
+**Question**: How can we get a list of students who scored better than the average grade?
+
+```sql
+select student, grade
+from test_score
+where grade > (
+  select avg(grade)
+  from test_score
+)
+-- returns the data for students who scored better than the average grade
+```
+
+The subquery is performed first since it is inside the parenthesis. We can also use the `in` operator in conjunction with a subquery to check against multiple results returned. For example we can operate on a separate table:
+
+```sql
+select student, grade
+from test_score
+where student in (
+  select student
+  from honor_roll
+)
+-- we could also do this with a join
+```
+
+The `exists` operator is used to test for existence of rows in a subquery. Typically a subquery is passed in the `exists()` function to check if any rows are returned with the subquery (see [w3](https://www.w3schools.com/sql/sql_exists.asp)). The `exists` operator is used to test for the existence of any record in a subquery. The `exists` operator returns TRUE if the subquery returns one or more records. Typical syntax:
+
+```sql
+select c1
+from t1
+where exists(
+  select c1 
+  from t1
+  where cond1
+)
+```
+
+Examples:
+
+```sql
+-- task: return film titles that have a higher than average rental cost
+select title, rental_rate
+from film
+where rental_rate > (
+ select avg(rental_rate) from film
+)
+
+-- subquery: calculate avg rental rate
+-- select avg(rental_rate) from film
+```
+
+```sql
+-- task: grad film titles that have been returned between certain dates
+
+select film_id, title
+from film
+where film_id in (
+ select inventory.film_id
+ from inventory
+ join rental on rental.inventory_id = inventory.inventory_id
+ where return_date between '2005-05-29' and '2005-05-30'
+)
+order by title asc
+
+-- problem: we do not have the film id
+-- solution: we grad the tile with the help of the inventory id. We get the film_id from the inventory and use it as a subquery. 
+```
+
+```sql
+-- task: find customers that have at least one payment, whose amount is greater than 11
+
+select customer_id, first_name, last_name
+from customer as c
+where exists (
+ select *
+ from payment as p
+ where 
+  p.customer_id = c.customer_id
+  and p.amount > 11
+)
+order by first_name
+-- returns 8 customers
+```
+
+**Alternative**:
+
+```sql
+-- task: find customers that have at least one payment, whose amount is greater than 11
+
+select c.customer_id, c.first_name, c.last_name
+from payment as p, customer as c
+where 
+ p.customer_id = c.customer_id
+ and p.amount > 11
+```
+
+**Negation**:
+
+```sql
+select count(distinct(c.customer_id))
+from customer as c
+where not exists (
+ select *
+ from payment as p
+ where 
+  p.customer_id = c.customer_id
+  and p.amount > 11
+)
+-- returns 591
+-- returns customers that do not have any payment greater than 11 
+-- note that this query returns customers that do not exists in the subquery (NOT clients that have payments with an amount less than 11)
+```
+
+Note that we cannot negate the alternative to produce the same result, since all customers have at least a payment with an amount less than or equal to 11.
+
+## 8.5. Self-Join
+
+A self-join is query in which a table is joined to itself. Self-joins are useful for comparing values in a column of rows within the same table.
+
+The self join can be viewed a join of two copies of the same table. The table is not actually copied, but SQL performs the command as though it were. There is no special keyword for a self join, its simply standard JOIN syntax with the same table in both parts.
+
+However, when using a self join it is necessary to use an alias for the table, otherwise the table names would be ambiguous. Let's see a syntax example of this. Basic syntax:
+
+```sql
+select c1.col, c2.col
+from customer as c1
+join customer as c2 on c1.some_col = c2.other_col
+```
+
+A self join is a join in which a table is joined with itself (which is also called unary relationships), especially when the table has a FOREIGN KEY which references its own PRIMARY KEY. To join a table itself means that each row of the table is combined with itself and with every other row of the table (see [w3](https://www.w3resource.com/sql/joins/perform-a-self-join.php)).
+
+Example:
+
+We store employee records in a table. Employees report to other employees, e.g. employee 1 reports to employee 2. We want results showing the employee name and their reports recipient name.
+
+With the `join` operator:
+
+```sql
+select e_emp.name as employee_name, e_rep.name as rep_name
+from employee as e_emp
+join employee as e_rep
+on e_rep.emp_id = e_emp.rep_id
+```
+
+Without the `join` opeartor:
+
+```sql
+select e_emp.name as employee_name, e_rep.name as rep_name
+from employee as e_emp, employee as e_rep
+where e_rep.emp_id = e_emp.rep_id
+```
+
+Visually the example looks like this:
+
+**EMPLOYEE**
+| emp_id | name    | rep_id |
+| ------ | ------- | ------ |
+| 1      | Andrew  | 3      |
+| 2      | Bob     | 3      |
+| 3      | Charlie | 4      |
+| 4      | David   | 1      |
+
+The join produces:
+
+**EMPLOYEE AS e_emp, EMPLOYEE AS e_rep**
+| e_emp.emp_id | e_emp.name | e_emp.rep_id | e_rep.emp_id | e_rep.name | e_rep.rep_id |
+| ------------ | ---------- | ------------ | ------------ | ---------- | ------------ |
+| 1            | Andrew     | 3            | 1            | Andrew     | 3            |
+| 1            | Andrew     | 3            | 2            | Bob        | 3            |
+| 1            | Andrew     | 3            | 3            | Charlie    | 4            |
+| 1            | Andrew     | 3            | 4            | David      | 1            |
+| 2            | Bob        | 3            | 1            | Andrew     | 3            |
+| ...          | ...        | ...          | ...          | ...        | ...          |
+
+We join where / on foreign key = primary key:
+
+**EMPLOYEE AS e_emp JOIN EMPLOYEE AS e_rep ON e_rep.emp_id = e_emp.emp_id**
+| e_emp.emp_id | e_emp.name    | **e_emp.rep_id** | **e_rep.emp_id** | e_rep.name    | e_rep.rep_id |
+| ------------ | ------------- | ---------------- | ---------------- | ------------- | ------------ |
+| <s>1</s>     | <s>Andrew</s> | <s>3</s>         | <s>1</s>         | <s>Andrew</s> | <s>3</s>     |
+| <s>1</s>     | <s>Andrew</s> | <s>3</s>         | <s>2</s>         | <s>Bob</s>    | <s>3</s>     |
+| 1            | Andrew        | 3                | 3                | Charlie       | 4            |
+| <s>1</s>     | <s>Andrew</s> | <s>3</s>         | <s>4</s>         | <s>David</s>  | <s>1</s>     |
+| <s>2</s>     | <s>Bob</s>    | <s>3</s>         | <s>1</s>         | <s>Andrew</s> | <s>3</s>     |
+| ...          | ...           | ...              | ...              | ...           | ...          |
+
+Example:
+
+```sql
+-- task: find all the pairs of films that have the same length (explicit self-join)
+
+select f_left.title, f_right.title, f_right.length
+from film as f_left
+join film as f_right on f_left.length = f_right.length
+where f_left.title != f_right.title
+order by f_right.length
+```
+
+Alternatives:
+
+```sql
+-- task: find all the pairs of films that have the same length (explicit self-join w/out where clause)
+
+select f_left.title, f_right.title, f_right.length
+from film as f_left
+join film as f_right on 
+ f_left.length = f_right.length and
+ f_left.film_id != f_right.film_id
+ 
+order by f_right.length
+```
+
+```sql
+-- task: find all the pairs of films that have the same length (implicit self-join)
+
+select f_left.title, f_right.title, f_right.length
+from film as f_left, film as f_right 
+where 
+ f_left.length = f_right.length and
+ f_left.title != f_right.title
+order by f_right.length
+```
+
+# 9. Assessment Test 2
+
+We will use a new database for a set of exercise questions. This database has a `public` and `cd` [schema](https://www.postgresql.org/docs/13/ddl-schemas.html). This means the queries for the FROM tables will have `cd.` in front them.
+
+Running Command:
+
+```shell
+/Applications/pgAdmin 4.app/Contents/SharedSupport/pg_restore --host "localhost" --port "0000" --username "postgres" --no-password --dbname "exercise" --section=pre-data --section=data --section=post-data --verbose "/.../exercise.tar"
+```
+
+How can you retrieve all the information from the cd.facilities table?
+
+```sql
+select *
+from cd.facility
+```
+
+You want to print out a list of all of the facilities and their cost to members. How would you retrieve a list of only facility names and costs?
+
+```sql
+select name, m_cost
+from cd.facility
+```
+
+How can you produce a list of facilities that charge a fee to members?
+
+```sql
+select name, m_cost
+from cd.facility
+where m_cost > 0
+```
+
+How can you produce a list of facilities that charge a fee to members, and that fee is less than 1/50th of the monthly maintenance cost? Return the facid, facility name, member cost, and monthly maintenance of the facilities in question.
+
+```sql
+select fac_id, name, m_cost, maintenance
+from cd.facility
+where 
+ m_cost > 0 
+ and m_cost < maintenance/50.0
+```
+
+How can you produce a list of all facilities with the word 'Tennis' in their name?
+
+```sql
+select * 
+from cd.facility
+where name ilike '%tennis%'
+```
+
+How can you retrieve the details of facilities with ID 1 and 5? Try to do it without using the OR operator.
+
+```sql
+select *
+from cd.facility
+where fac_id in (1,5)
+```
+
+How can you produce a list of members who joined after the start of September 2012? Return the memid, surname, firstname, and joindate of the members in question.
+
+```sql
+select *
+from cd.member
+where join_date between '2012-09-01' and now()
+```
+
+Alternative:
+
+```sql
+select * 
+from cd.member
+where join_date::date >= '2012-09-01'
+```
+
+How can you produce an ordered list of the first 10 surnames in the members table? The list must not contain duplicates.
+
+```sql
+select distinct(last_name)
+from cd.member
+where last_name != 'GUEST'
+order by last_name
+limit 10
+```
+
+You'd like to get the signup date of your last member. How can you retrieve this information?
+
+```sql
+select max(join_date)
+from cd.member
+-- return max
+```
+
+Alternative 1:
+
+```sql
+select first_name, last_name, join_date
+from cd.member
+order by join_date desc
+limit 1
+-- order and limit
+```
+
+Alternative 2:
+
+```sql
+select first_name, last_name, join_date
+from cd.member
+where join_date in (
+ select max(join_date)
+ from cd.member
+)
+-- where ... in clause; condition is single value
+```
+
+Alternative 3:
+
+```sql
+select first_name, last_name, join_date
+from cd.member as m_left
+join (
+ select max(join_date) as max_join_date
+ from cd.member
+) as m_right
+on m_left.join_date = m_right.max_join_date
+-- inner join on single value
+```
+
+Produce a count of the number of facilities that have a cost to guests of 10 or more.
+
+```sql
+select count(*)
+from cd.facility
+where g_cost >= 10
+```
+
+Produce a list of the total number of slots booked per facility in the month of September 2012. Produce an output table consisting of facility id and slots, sorted by the number of slots.
+
+```sql
+select fac_id, sum(slot) as booked_slots_sept
+from cd.booking
+where extract(month from start_time) = 9
+-- where start_time::date >= '2012-09-01' and start_time::date <= '2012-10-01'
+group by fac_id
+order by sum(slot) asc
+```
+
+Produce a list of facilities with more than 1000 slots booked. Produce an output table consisting of facility id and total slots, sorted by facility id.
+
+```sql
+select fac_id, sum(slot)
+from cd.booking
+group by fac_id
+having sum(slot) > 1000
+order by fac_id
+```
+
+How can you produce a list of the start times for bookings for tennis courts, for the date '2012-09-21'? Return a list of start time and facility name pairings, ordered by the time.
+
+```sql
+select b.start_time, f.name
+from cd.booking as b
+join cd.facility as f on b.fac_id = f.fac_id
+where 
+ b.start_time::date = '2012-09-21'
+ and f.name ilike '%tennis%court%'
+order by b.start_time
+-- keyword as is optional
+```
+
+Alternative:
+
+```sql
+select start_time, f.name
+from cd.booking as b
+join cd.facility as f on b.fac_id = f.fac_id
+where 
+  start_time between '2012-09-21' and '2012-09-22'
+  and f.name ilike '%tennis%court%'
+order by start_time
+```
+
+How can you produce a list of the start times for bookings by members named 'David Farrell'?
+
+```sql
+select start_time
+from cd.booking as b
+join cd.member as m on b.mem_id = m.mem_id
+where 
+ m.first_name = 'David'
+ and m.last_name = 'Farrell'
+```
+
+# 10. Creating Databases and Tables
+
+Let's now shift our focus to creating our own databases and tables.
+
+Section Overview
+
+- Data Types
+- Primary and Foreign Keys
+- Constraints
+- `create`
+- `insert`
+- `update`
+- `delete`, `alter`, `drop`
+
+We first focus on learning a few theoretical concepts, such as choosing the correct data type for a stored value and setting possible constraints on it. We will also learn about primary and foreign keys.
+
+## 10.1. Data Types
+
+Main data types in SQL:
+
+- Boolean
+  - `True` or `False`
+- Character
+  - `char`, `varchar`, and `text`
+- Numeric
+  - `integer` and `floating-point number`
+- Temporal
+  - `date`, `time`, `timestamp`, and `interval`
+- UUID: Universally Unique Identifiers
+- Array
+  - Stores an `array` of `strings`, `numbers`, etc.
+- JSON
+- Hstore key-value pair
+- Special types such as network address and geometric data.
+
+When creating databases and tables, you should carefully consider which data types should be used for the data be stored. Review the [documentation](https://www.postgresql.org/docs/current/datatype.html) to see limitations of data types.
+
+## 10.2. Primary and Foreign Key
+
+Text here!
+
+# 11. Misc
 
 Misc notes:
 
@@ -1228,3 +1756,4 @@ WHERE schemaname != 'pg_catalog' AND
 - [Join (SQL) Wiki](https://en.wikipedia.org/wiki/Join_(SQL))
 - [Table Covert Online](https://tableconvert.com/)
 - [Math Symbols List](https://www.rapidtables.com/math/symbols/Basic_Math_Symbols.html)
+- [Casting columns to date](https://stackoverflow.com/questions/5875712/postgresql-select-something-where-date-01-01-11)

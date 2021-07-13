@@ -64,7 +64,14 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [10.9. CHECK Constraint](#109-check-constraint)
 - [11. Assessment Test 3](#11-assessment-test-3)
 - [12. Conditional Expressions and Procedures](#12-conditional-expressions-and-procedures)
-- [13. Misc](#13-misc)
+  - [12.1. CASE ... END Statement](#121-case--end-statement)
+  - [12.2. COALESCE() Function](#122-coalesce-function)
+  - [12.3. CAST() Function](#123-cast-function)
+  - [12.4. NULLIF() Function](#124-nullif-function)
+  - [12.5. (CREATE) VIEW Statement](#125-create-view-statement)
+- [13. Import and Export](#13-import-and-export)
+- [14. PgSQL with Python](#14-pgsql-with-python)
+- [15. Misc](#15-misc)
 
 <!-- update number, TOC -->
 
@@ -174,6 +181,8 @@ We retrieve information from tables with queries. We construct queries with stat
 
 ## 3.1. SELECT Statement
 
+The `select` statement is used to select data from a database. The data returned is stored in a result table, called the result-set.
+
 The syntax we learn can be applied to any major type of SQL database. `select` is the most common statement used, and it allows us to retrieve information from a table. Later on we will learn how to combine `select` with other statements to perform more complex queries.
 
 ```sql
@@ -218,6 +227,8 @@ select count(distinct(c1)) from t1
 ```
 
 ## 3.4. WHERE Clause
+
+The `where` clause is used to filter records. It is used to extract only those records that fulfill a specified condition.
 
 `select` and `where` are the most fundamental SQL statements. The `where` statement allows us to **specify conditions** on columns for the rows to be returned. Basic syntax:
 
@@ -818,6 +829,14 @@ select payment.payment_id, payment.customer_id, customer.email
 from payment
 inner join customer on payment.customer_id = customer.customer_id
 -- this shows only customer that have done a payment
+```
+
+**Alternative**: 
+
+```sql
+select payment_id, email
+from payment 
+join customer using(customer_id)
 ```
 
 The words `inner` and `outer` are optional in all forms. `inner` is the default; `left`, `right`, and `full` imply an outer join.
@@ -2163,7 +2182,370 @@ values(
 
 # 12. Conditional Expressions and Procedures
 
-# 13. Misc
+Section Overview
+
+- `case`
+- `coalesce`
+- `nullif`
+- `cast`
+- Views
+- Import and Export Functionality
+
+These keywords and functions will allow us to add logic to our commands and workflows in SQL.
+
+## 12.1. CASE ... END Statement
+
+We can use the `case` statement to only execute SQL code when certain conditions are met. This is very similar to `if ... else` statements in other programming languages.
+
+There are two main ways to use a `case` statement, either a general `case` or a `case` expression. Both methods can lead to the same results. Let's first show the syntax for a **general** `case` (more flexible):
+
+```sql
+case
+  when cond1 then res1
+  when cond2 then res2
+  else default_res
+end
+from t1
+```
+
+Example:
+
+| a   |
+| --- |
+| 1   |
+| 2   |
+
+```sql
+select a
+case 
+  when a = 1 then 'one'
+  -- if the instance is equal to one, return the string 'one' 
+  when a = 2 then 'two'
+  else 'other' 
+end -- as new_col_name
+from test
+-- this generates a new column named 'Case'
+```
+
+| a   | Case |
+| --- | ---- |
+| 1   | one  |
+| 2   | two  |
+
+The `case` **expression syntax** first evaluates an expression then compares the result with each value in the `when` clauses sequentially (it only works for equality):
+
+```sql
+case expresssion
+  when val1 then res1
+  when val2 then res2
+  else default_res
+end
+```
+
+```sql
+select a
+case a
+  when 1 then 'one'
+  when 2 then 'two'
+  else 'other'
+end -- as new_col_name
+from test
+-- yields the same resulst as the query above
+```
+
+Example:
+
+```sql
+select customer_id, 
+case
+ when (customer_id <= 100 ) then 'Premium'
+ when (customer_id between 101 and 200) then 'Plus'
+ else 'Normal'
+end as tier
+from customer
+order by customer_id 
+```
+
+```sql
+select customer_id,
+case customer_id
+ when 2 then 'First Place'
+ when 5 then 'Second Place'
+ when 11 then 'Third Place'
+ else null
+end as raffle_results
+from customer
+order by raffle_results
+```
+
+Example:
+
+```sql
+select rental_rate, count(*)
+from film
+group by rental_rate
+order by rental_rate
+```
+
+We can reformat the results of the query above with the `case` statement:
+
+-- we can perform opeartions on the results of the case statements
+
+```sql
+select 
+sum(case rental_rate
+ when 0.99 then 1
+ else 0
+end) as bargains, 
+sum(case rental_rate
+ when 2.99 then 1
+ else 0
+end) as regular, 
+sum(case rental_rate
+ when 4.99 then 1
+ else 0
+end) as premium
+from film
+```
+
+**Challenge**: We want to know and compare the various amounts of films we have per movie rating. Use `case` and the dvdrental database:
+
+```sql
+select 
+ sum(
+  case rating
+  when 'NC-17' then 1
+  else 0
+  end) as nc17, 
+ sum(
+  case rating
+  when 'G' then 1
+  else 0
+  end ) as g, 
+ sum(
+  case rating
+  when 'PG' then 1
+  else 0
+  end) as pg, 
+ sum(
+  case rating
+  when 'PG-13' then 1
+  else 0
+  end) as pg13,
+ sum(
+  case rating
+  when 'R' then 1
+  else 0
+  end ) as r
+from film
+```
+
+## 12.2. COALESCE() Function
+
+The `coalesce` function accepts an unlimited number of arguments. It returns the first argument that is not null. If all arguments are null, the `coalesce` function will return null.
+
+```sql
+coalesce(arg_1,...,arg_n)
+```
+
+The `coalesce` function becomes useful when querying a table that contains null values and substituting it with another value. Example: 
+
+```sql
+select item, (price-discount) as final_price
+from price_table
+-- this query returns null as the final_price if the discount is null
+```
+
+This becomes: 
+
+```sql
+select item, (price-coalesce(discount,0)) as final price
+from price_table
+
+```
+
+## 12.3. CAST() Function
+
+The `cast` operator let's you convert from one data type into another. Keep in mind not every instance of a data type can be `cast` to another data type, it must be reasonable to convert the data, for example '5' to an integer will work, 'five' to an integer will not. There are two options: 
+
+```sql
+select cast('5' as int)
+```
+
+```sql
+select '5'::int
+```
+
+## 12.4. NULLIF() Function
+
+The NULLIF function takes in 2 arguments and returns `null` if both are equal, otherwise it returns the first argument passed.
+
+Example: 
+```sql
+nullif(10,10)
+-- returns null
+```
+
+This becomes very useful in cases where a `null` value would cause an error or unwanted result.
+
+Example: Given this table calculate the ratio of department A to deparment B. 
+
+| Name    | Dept |
+| ------- | ---- |
+| Alice   | A    |
+| Bob     | A    |
+| Charlie | B    |
+
+```sql
+select(
+	sum(case when dept = 'A' then 1 else 0 end)/
+	sum(case when dept = 'B' then 1 else 0 end)
+) as dept_ratio 
+from dept
+```
+
+But what happens when department B has no people? 
+
+```sql
+select(
+	sum(case when dept = 'A' then 1 else 0 end)/
+	nullif(sum(case when dept = 'B' then 1 else 0 end),0)
+) as dept_ratio 
+from dept
+```
+
+If the denominator is 0 we return a null. 
+
+## 12.5. (CREATE) VIEW Statement
+
+A view is a virtual table based on the result-set of an SQL statement.
+
+A view contains rows and columns, just like a real table. The fields in a view are fields from one or more real tables in the database. You can add SQL statements and functions to a view and present the data as if the data were coming from one single table.
+
+Often there are specific combinations of tables and conditions that you find yourself using quite often for a project. Instead of having to perform the same query over and over again as a starting point, you can create a `view` to quickly see this query with a simple call.
+
+Basic syntax:
+```sql
+select c1,c2,c3,c4
+from t1
+join t2
+on t1.c1 = t2.c3
+```
+
+Becomes:
+```sql
+select * from view
+```
+
+A view is a database object that is of a stored query. A view can be accessed as a virtual table in PostgreSQL. Notice that a view does not store data physically, it simply stores the query. It transforms a complex query into a (virtual table). You can also update and alter existing views. 
+
+Examples: 
+
+```sql
+create view customer_info as 
+select first_name, last_name, address
+from customer as c
+join address as a 
+on c.address_id = a.address_id
+```
+
+Afterwards we can call: 
+
+```sql
+select * from customer_info
+```
+
+To modify the view we can: 
+
+```sql 
+create or replace view customer_info as 
+select first_name, last_name, address, district
+from customer as c
+join address as a 
+on c.address_id = a.address_id
+```
+
+To drop / delete / remove the view we can (check first if it exists to prevent errors):
+
+```sql
+drop view if exists customer_info 
+```
+
+To rename: 
+
+```sql 
+alter view customer_info rename to customer_info_new
+```
+
+# 13. Import and Export
+
+Useful links: 
+
+- [Documentation on COPY Function](https://www.postgresql.org/docs/current/sql-copy.html)
+- [How to import CSV file data into a PgSQL table?](https://stackoverflow.com/questions/2987433/how-to-import-csv-file-data-into-a-postgresql-table)
+- [How to import and export data using CSV files in PostgreSQL](https://www.enterprisedb.com/postgres-tutorials/how-import-and-export-data-using-csv-files-postgresql)
+- [Create table from csv file with headers](https://stackoverflow.com/questions/21018256/can-i-automatically-create-a-table-in-postgresql-from-a-csv-file-with-headers)
+
+Not every outside data file will work, variations in formatting, macros, data types, etc. may prevent the import command from reading the file, at which point, you must edit your file to be compatible with PgSQL.
+
+The Import command DOES NOT create a table for you. It assumes a table is already created. Currently there is no automated way within pgAdmin to create table directly from a `.csv` file.
+
+Import example: 
+
+```sql
+command " "\\copy public.simple (id, a, b, c) FROM '/Users/aceituno/Desktop/projects-ss21/sql/simple_table.csv' DELIMITER ',' CSV HEADER QUOTE '\"' ESCAPE '''';""
+```
+
+We imported twice so we deleted duplicates with: 
+
+```sql
+-- task: delete duplicates
+-- solution: find a identifying column and use the ctdi (physical location of the row version)
+-- assumptions: we can identify duplicates based on column id
+
+delete from simple ls using(
+	select min(ctid) as ctid ,id
+	from simple
+	group by id having count(*)>1
+) rs
+where ls.id = rs.id
+and ls.ctid <> rs.ctid
+	  
+-- The USING clause is a shorthand that allows you to take advantage of the specific situation where both sides of the join use the same name for the joining column(s). It takes a comma-separated list of the shared column names and forms a join condition that includes an equality comparison for each one. For example, joining T1 and T2 with USING (a, b) produces the join condition ON T1.a = T2.a AND T1.b = T2.b.
+
+-- ctid: The physical location of the row version within its table. Note that although the ctid can be used to locate the row version very quickly, a row's ctid will change each time it is updated or moved by VACUUM FULL. Therefore ctid is useless as a long-term row identifier. The OID, or even better a user-defined serial number, should be used to identify logical rows.
+```
+
+**Logic of deleting duplicates**: 
+
+```sql
+-- general delete syntax
+
+delete from ls
+using rs
+where ls.id = ls.id
+
+-- our specific case
+
+delete from ls
+using rs
+where ls.id = rs.id
+and rc.ctid != ls.ctid
+
+-- construction rs
+
+select min(ctid) as ctid, id
+from ls
+group by id
+having count(*)>1
+```
+
+# 14. PgSQL with Python
+
+In this section of the course I'll give you a quick overview of how to use the psycopg2 library with Python to interact with a database in PostgreSQl with Python.
+
+
+# 15. Misc
 
 Misc notes:
 
@@ -2204,3 +2586,6 @@ WHERE schemaname != 'pg_catalog' AND
 - [Table Covert Online](https://tableconvert.com/)
 - [Math Symbols List](https://www.rapidtables.com/math/symbols/Basic_Math_Symbols.html)
 - [Casting columns to date](https://stackoverflow.com/questions/5875712/postgresql-select-something-where-date-01-01-11)
+- [Transpose Results](https://stackoverflow.com/questions/23060256/postgres-transpose-rows-to-columns)
+- [Dollar Quoting](https://stackoverflow.com/questions/12144284/what-are-used-for-in-pl-pgsql)
+- [Delete duplicate records](https://stackoverflow.com/questions/6583916/delete-duplicate-rows-from-small-table)

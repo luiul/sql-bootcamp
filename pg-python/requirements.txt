@@ -1,0 +1,5 @@
+# This file may be used to create an environment using:
+# $ conda create --name <env> --file <this file>
+# platform: osx-64
+psycopg2=2.9.1=py38h05cbfbd_0
+python-dotenv=0.18.0=pyhd8ed1ab_0

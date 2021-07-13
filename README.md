@@ -53,7 +53,18 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
 - [10. Creating Databases and Tables](#10-creating-databases-and-tables)
   - [10.1. Data Types](#101-data-types)
   - [10.2. Primary and Foreign Key](#102-primary-and-foreign-key)
-- [11. Misc](#11-misc)
+  - [10.3. Constraints](#103-constraints)
+  - [10.4. CREATE TABLE Statement (TABLE)](#104-create-table-statement-table)
+  - [10.5. INSERT INTO Statement (RECORD)](#105-insert-into-statement-record)
+  - [10.6. UPDATE Statement (RECORD)](#106-update-statement-record)
+  - [10.7. DELETE Statement (RECORD)](#107-delete-statement-record)
+  - [10.8. ALTER TABLE Statement (TABLE AND COLUMN)](#108-alter-table-statement-table-and-column)
+    - [10.8.1. RENAME, ADD, DROP, SET Statements (TABLE AND COLUMN)](#1081-rename-add-drop-set-statements-table-and-column)
+    - [10.8.2. DROP (TABLE) Statement (COLUMN)](#1082-drop-table-statement-column)
+  - [10.9. CHECK Constraint](#109-check-constraint)
+- [11. Assessment Test 3](#11-assessment-test-3)
+- [12. Conditional Expressions and Procedures](#12-conditional-expressions-and-procedures)
+- [13. Misc](#13-misc)
 
 <!-- update number, TOC -->
 
@@ -1434,7 +1445,7 @@ The join produces:
 | 2            | Bob        | 3            | 1            | Andrew     | 3            |
 | ...          | ...        | ...          | ...          | ...        | ...          |
 
-We join where / on foreign key = primary key:
+We join on foreign key = primary key:
 
 **EMPLOYEE AS e_emp JOIN EMPLOYEE AS e_rep ON e_rep.emp_id = e_emp.emp_id**
 | e_emp.emp_id | e_emp.name    | **e_emp.rep_id** | **e_rep.emp_id** | e_rep.name    | e_rep.rep_id |
@@ -1714,9 +1725,445 @@ When creating databases and tables, you should carefully consider which data typ
 
 ## 10.2. Primary and Foreign Key
 
-Text here!
+A **primary key** is a column or a group of columns used to identify a row uniquely in a table. For example, our dvdrental database we saw customers had a unique, non-null customer_id column as their primary key.
 
-# 11. Misc
+Primary keys are also important since they allow us to easily discern what columns should be used for joining tables together. Later we will learn about `serial` data type.
+
+A **foreign key** is a field or group of fields in a table that uniquely identifies a row in another table. A foreign key is defined in a table that references to the primary key of the other table. The table that contains the foreign key is called referencing table or child table. The table to which the foreign key references is called referenced table or parent table. A table can have multiple foreign keys depending on its relationships with other tables.
+
+Recall in the dvdrental database payment table, each payment row had its unique payment_id (a primary key) and identified the customer that made the payment through the customer_id (a foreign key since it references the customer table's primary key).
+
+You may begin to realize primary key and foreign key typically make good column choices for joining together two or more tables. When creating tables and defining columns, we can use constraints to define columns as being a primary key, or attaching a foreign key relationship to another table.
+
+## 10.3. Constraints
+
+Constraints are the rules enforced on data columns on table. These are used to prevent invalid data from being entered into the database. This ensures the accuracy and reliability of the data in the database.
+
+Constraints can be divided into two main categories:
+
+- Column Constraints: Constrains the data in a column to adhere to certain conditions.
+- Table Constraints: Applied to the entire table rather than to an individual column.
+
+The most common **column constraints** used:
+
+- `not null` Constraint: Ensures that a column cannot have NULL value.
+- `unique` Constraint: Ensures that all values a column are different.
+- `primary` Key: Uniquely identifies each row/record in a database table.
+- `foreign` Key: Constrains data based or columns in other tables.
+- `check` Constraint: Ensures that all values in a column satisfy certain conditions.
+- `exclusion` Constraint: Ensures that if any two rows are compared on the specified column or expression using the specified operator, not all of these comparisons will return TRUE.
+
+The most common **table constraints** used:
+
+- `check(condition)`: to check condition when inserting or updating data.
+- `refenrences`: to constrain the value stored in the column that must exist in a column in another table.
+- `unique(column_list)`: Forces the values stored in the columns listed inside the parentheses to be unique.
+- `primary key(columns_list)`: Allows you to define the primary key that consists of multiple columns.
+
+## 10.4. CREATE TABLE Statement (TABLE)
+
+General syntax:
+
+```sql
+CREATE TABLE table_name(
+  column_name TYPE column_constraint,
+  column_name TYPE column_constraint,
+  table_constraint table_constraint
+) 
+INHERITS existing_table_name;
+```
+
+Example:
+
+```sql
+create table player(
+  player_id serial primary key, 
+  age smallint not null
+)
+```
+
+Always refer to the [documentation](https://www.postgresql.org/docs/current/datatype-numeric.html) when choosing data types. `serial` datatype:
+
+- In PostgreSQL, a sequence is a special kind of database object that generates a sequence of integers.
+- A sequence is often used as the primary key column in a table.
+- It will create a sequence object and set the next value generated by the sequence as the default value for the column.
+- This is perfect for a primary key, because it logs unique integer entries for you automatically upon insertion.
+- If a row is later removed, the column with the `serial` data type will not adjust, marking the fact that a row was removed from the sequence, e.g. for 1,2,3,5,6,7 -> you know row 4 was removed at some point.
+
+We create a database (in the table we generate a password and an email column, see [here](https://stackoverflow.com/questions/2647158/how-can-i-hash-passwords-in-postgresql) and [here](https://dba.stackexchange.com/questions/68266/what-is-the-best-way-to-store-an-email-address-in-postgresql) for best practices):
+
+```sql
+create table account(
+ user_id serial primary key, 
+ username varchar(50) unique not null, 
+ password varchar(50) not null, 
+ email varchar(255) unique not null, 
+ create_date timestamp not null, 
+ last_login timestamp
+)
+```
+
+```sql
+create table job(
+ job_id serial primary key, 
+ job_name varchar(255) unique not null
+)
+```
+
+```sql
+create table account_jo(
+ user_id int references account(user_id),
+ -- serial should be only used as a primary key for the table it is in
+ job_id int references job(job_id),
+ hire_date timestamp
+)
+```
+
+## 10.5. INSERT INTO Statement (RECORD)
+
+The `insert into` statement is used to insert new records in a table. General syntax:
+
+```sql
+insert into table(col1, col2, ...)
+values
+  (val1_1, val2_1, ...), 
+  (val1_2, val2_2, ...)
+  ...
+```
+
+Syntax for inserting values from another table:
+
+```sql
+insert into table(col1, col2, ...)
+select col1, col2, ...
+from another_table
+where condition
+```
+
+Keep in mind, the inserted row values must match up for the table, including constraints. `serial` columns do not need to be provided a value (since serial is a sequence object, so it will automatically update the next available `int` for that row).
+
+Example:
+
+```sql
+insert into account(username, password, email, create_date)
+values
+ ('Luis','password','luis@mail.com',now())
+```
+
+```sql
+insert into job(job_name)
+values
+ ('Astronaut')
+```
+
+```sql
+insert into account_job(user_id, job_id, hire_date)
+values
+ (1,1,now())
+```
+
+## 10.6. UPDATE Statement (RECORD)
+
+The `update` statement is used to modify the existing records in a table. General syntax:
+
+```sql
+update table
+set 
+  col1 = val1,
+  col2 = val2,
+  ...
+where condition
+```
+
+Example:
+
+```sql
+update account
+set last_login = now()
+where last_login is null
+```
+
+We can also reset everything if we don't add a `where` condition:
+
+```sql
+update account
+set last_login = now()
+```
+
+We can also set everything based on another column:
+
+```sql
+update account
+set last_login = create_date
+```
+
+We can also use another table's values (so called UPDATE JOIN):
+
+```sql
+update table_left
+set col_left = table_right.col_right
+from table_right
+where table_left.id = table_right.id
+```
+
+We can also return the affected rows:
+
+```sql
+update account 
+set last_login = create_date
+returning account_id, last_login
+```
+
+Examples:
+
+```sql
+update account
+set last_login = now()
+returning * 
+```
+
+```sql
+update account
+set last_login = create_date
+returning * 
+
+```
+
+```sql
+update account_job as aj
+ set hire_date = a.create_date
+from account as a
+ where a.user_id = aj.user_id
+returning * 
+```
+
+**Note**: Be careful when updating records in a table! Notice the `wher` clause in the `update` statement. The `where` clause specifies which record(s) should be updated. If you omit the `where` clause, all records in the table will be updated!
+
+## 10.7. DELETE Statement (RECORD)
+
+The `delete` statement is used to delete existing records in a table. Basic syntax:
+
+```sql
+delete from t1
+where id = 1
+```
+
+We can delete rows based on their presence in other tables:
+
+```sql
+delete from t1
+using t2
+where t1.id = t2.id
+```
+
+We can delete all rows in a table:
+
+```sql
+delete from t1
+```
+
+**Note**: Be careful when deleting records in a table! Notice the `where` clause in the `delete` statement. The `where` clause specifies which record(s) should be deleted. If you omit the `where` clause, all records in the table will be deleted!
+
+Similar to the `update` statement, we can also add in a `returning` call to return rows that were removed.
+
+## 10.8. ALTER TABLE Statement (TABLE AND COLUMN)
+
+The `alter table` statement is used to add, delete, or modify columns in an existing table. The `alter table` statement is also used to add and drop various constraints on an existing table. See [documentation](https://www.postgresql.org/docs/current/sql-altertable.html) for all the options available in the synopsis.
+
+### 10.8.1. RENAME, ADD, DROP, SET Statements (TABLE AND COLUMN)
+
+In general the `alter` clause allows for changes to an existing table structure, e.g.:
+
+- Adding, dropping or renaming columns
+- Changing a column's data type
+- Set `default` values for a column
+- Add `check` constraints
+- Rename table
+
+General syntax:
+
+```sql
+alter table table_name
+-- action
+-- rename table
+rename to new_name
+-- rename column
+rename column col_name to new_col_name
+-- add columns
+add column new_col type
+-- add unique
+add unique(col_name)
+-- remove columns
+drop column col_name
+-- alter constraints
+alter column data_type
+set default value
+drop default value
+set not null
+drop not null
+add constraint constraint_name
+```
+
+Examples:
+
+```sql
+-- insert into info(title)
+-- values ('some new title')
+-- returns err: violates not-null constraint
+
+alter table info
+alter column ppl drop not null
+```
+
+To alter unique constraint see [here](https://www.w3schools.com/sql/sql_unique.asp).
+
+### 10.8.2. DROP (TABLE) Statement (COLUMN)
+
+`drop` allows for the complete removal of a column in a table. In PostgreSQL this will also automatically remove all of its indexes and constraints involving the column. However, it will not remove columns used in views, triggers, or stored procedures without the additional `cascade` clause. General syntax:
+
+```sql
+alter table table_name
+drop column col_name -- cascade
+-- add the cascade keyword to remove all dependencies
+```
+
+Check for existence to avoid error:
+
+```sql
+alter table table_name
+drop column if exists col_name
+```
+
+Drop multiple columns:
+
+```sql
+alter table table_name
+drop column col1
+drop column col2
+```
+
+## 10.9. CHECK Constraint
+
+The `check` constraint is used to limit the value range that can be placed in a column. If you define a `check` constraint on a column it will allow only certain values for this column. If you define a `check` constraint on a table it can limit the values in certain columns based on values in other columns in the row. Basically, the `check` constraint allows us to create more customized constraints that adhere to a certain condition. General syntax:
+
+```sql
+create table example(
+  id serial primary key, 
+  age smallint check (age > 21),
+  parent_age smallint check (parent_age > age)
+)
+```
+
+Example:
+
+```sql
+create table employee(
+ emp_id serial primary key,
+ fist_name varchar(50) not null, 
+ last_name varchar(50) not null, 
+ birthdate date check(birthdate > '1900-01-01'),
+ hire_date date check(hire_date > birthdate),
+ salary int check (salary > 0)
+)
+```
+
+# 11. Assessment Test 3
+
+This will test your knowledge of the previous section, focused on creating databases and table operations. This test will actually consist of a more open-ended assignment. Complete the following task:
+
+- Create a new database called "school" this database should have two tables: teachers and students.
+- The students table should have columns for student_id, first_name, last_name, homeroom_nr, phone, email, and graduation year.
+- The teachers table should have columns for teacher_id, first_name, last_name, homeroom_nr, department, email, and phone.
+- The constraints are mostly up to you, but your table constraints do have to consider the following:
+  - We must have a phone number to contact students in case of an emergency.
+  - We must have ids as the primary key of the tables
+  - Phone numbers and emails must be unique to the individual.
+- Once you've made the tables, insert a student named Mark Watney (student_id=1) who has a phone number of 777-555-1234 and doesn't have an email. He graduates in 2035 and has 5 as a homeroom number.
+- Then insert a teacher names Jonas Salk (teacher_id = 1) who as a homeroom number of 5 and is from the Biology department. His contact info is: jsalk@school.org and a phone number of 777-555-4321.
+
+Solution:
+
+```sql
+create table student(
+ student_id serial primary key, 
+ first_name varchar(50) not null, 
+ last_name varchar(50) not null, 
+ homeroom_nr varchar(50),
+ phone varchar(50), 
+ email varchar(255), 
+ grad_year date
+)
+```
+
+```sql
+create table teacher(
+ teacher_id serial primary key, 
+ first_name varchar(50) not null, 
+ last_name varchar(50) not null, 
+ homeroom_nr smallint,
+ department varchar(255), 
+ email varchar(255), 
+ phone varchar(255)
+)
+```
+
+```sql
+-- change data type from date to smallint to store only the grad year
+alter table student
+alter column grad_year type smallint using (extract(year from grad_year)::smallint)
+```
+
+```sql
+-- change data type from varchar to smallint to store only a number
+alter table student
+alter column homeroom_nr type smallint using (homeroom_nr::smallint)
+```
+
+```sql
+-- add unique constraint to phone and email columns (contraint will be assign to one name!)
+alter table student
+add unique(phone, email) 
+```
+
+```sql
+insert into student(
+ first_name,
+ last_name, 
+ phone,
+ grad_year, 
+ homeroom_nr
+)
+values(
+ 'Mark', 
+ 'Watney',
+ '777-555-1234',
+ 2035,
+ 5
+)
+```
+
+```sql
+insert into teacher(
+ first_name,
+ last_name, 
+ homeroom_nr, 
+ department,
+ email, 
+ phone
+)
+values(
+ 'Jonas',
+ 'Salk',
+ 5,
+ 'Biology',
+ 'jsalk@school.org',
+ '777-555-4321'
+)
+```
+
+# 12. Conditional Expressions and Procedures
+
+# 13. Misc
 
 Misc notes:
 

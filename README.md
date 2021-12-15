@@ -35,7 +35,7 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
 - [6. Assessment Test 1](#6-assessment-test-1)
 - [7. JOIN Clause](#7-join-clause)
   - [7.1. Aliases: AS Clause](#71-aliases-as-clause)
-  - [7.2. INNER JOIN Keyword (Intersection)](#72-inner-join-keyword-intersection)
+  - [7.2. (INNER) JOIN Keyword (Intersection)](#72-inner-join-keyword-intersection)
   - [7.3. FULL (OUTER) JOIN Keyword (Union and Symmetric Difference)](#73-full-outer-join-keyword-union-and-symmetric-difference)
   - [7.4. LEFT (OUTER) JOIN Keyword (A)](#74-left-outer-join-keyword-a)
   - [7.5. RIGHT (OUTER) JOIN Keyword (B)](#75-right-outer-join-keyword-b)
@@ -146,7 +146,7 @@ SQL is the programming language used to communicate with our database. Example:
 select customer_id, first_name, last_name
 from sales
 order by first_name;
--- the ; at the end of the query is optional is pgSQL 
+-- the ; at the end of the query is optional is pgSQL
 ```
 
 ## 1.2. Challenges
@@ -223,7 +223,7 @@ select count(c1) from t1
 
 ```sql
 select count(distinct(c1)) from t1
--- we're calling count on the result of distinct name 
+-- we're calling count on the result of distinct name
 ```
 
 ## 3.4. WHERE Clause
@@ -237,7 +237,7 @@ select c1,...,cn from t1
 where conditions
 ```
 
-The `where` clause appears immediately after the `from` clause of the `select` statement. The conditions are used to filter the rows returned from the `select` statement. There are a variety of standard operators to construct the conditions.  
+The `where` clause appears immediately after the `from` clause of the `select` statement. The conditions are used to filter the rows returned from the `select` statement. There are a variety of standard operators to construct the conditions.
 
 - Comparison operators: compare a column value to something.
 - Logical operators: allow us to combine multiple comparison operators.
@@ -259,7 +259,7 @@ where rental_rate >= 4 and replacement_cost >= 19.99 and rating = 'R'
 -- return the columns of the customer table
 -- select * from customer where 1=0
 
-select email, first_name, last_name from customer 
+select email, first_name, last_name from customer
 where first_name = 'Nancy' and last_name = 'Thomas'
 ```
 
@@ -267,7 +267,7 @@ where first_name = 'Nancy' and last_name = 'Thomas'
 
 ```sql
 -- select * from film where 1=0
-select description from film 
+select description from film
 where title = 'Outlaw Hanky'
 ```
 
@@ -275,7 +275,7 @@ where title = 'Outlaw Hanky'
 
 ```sql
 -- select * from address where 1=0
-select phone from "address" 
+select phone from "address"
 where address='259 Ipoh Drive'
 ```
 
@@ -284,7 +284,7 @@ where address='259 Ipoh Drive'
 We can use `order by` to sort rows based on a column value, in either ascending or descending order. Basic syntax:
 
 ```sql
-select c1, c2 from t1 
+select c1, c2 from t1
 order by c1 asc / desc c2 asc / desc
 -- ORDER BY uses ASC by default
 ```
@@ -292,7 +292,7 @@ order by c1 asc / desc c2 asc / desc
 Notice `order by` towards the end of a query, since we want to do any selection and filtering first, before finally sorting. We can use `order by` in multiple columns (this makes sense when one column has duplicate entries), e.g.
 
 ```sql
-select company, employee, sales from sales 
+select company, employee, sales from sales
 order by company asc , sales desc
 -- we first sort rows based on the company and then we sort rows by sales (the second sorting does not affect the first one). Here we query the companies by ascending name and order the sales by descending amounts
 ```
@@ -304,7 +304,7 @@ order by company asc , sales desc
 `limit` goes at the very end of a query request and is the last command to be executed. Basic syntax:
 
 ```sql
-select c1 from t1 
+select c1 from t1
 order by c1 desc limit 10
 -- get the top 10 values in c1
 ```
@@ -312,9 +312,9 @@ order by c1 desc limit 10
 For example:
 
 ```sql
-select * from payment 
-where amount != 0 
-order by payment_date desc 
+select * from payment
+where amount != 0
+order by payment_date desc
 limit 5
 -- history of the 5 most recent payments where the amount is not zero
 ```
@@ -323,11 +323,11 @@ limit 5
 
 ```sql
 -- return columns names / layout of the table
--- select * from payment limit 1 
+-- select * from payment limit 1
 
 select distinct(customer_id), payment_date from payment
--- where 
-order by payment_date asc 
+-- where
+order by payment_date asc
 limit 10
 -- assumption: we want to reward 10 different paying cusotmers
 ```
@@ -339,7 +339,7 @@ limit 10
 -- select * from film limit 1
 
 select title, "length" from film
--- where 
+-- where
 order by "length" asc
 limit 5
 ```
@@ -360,7 +360,7 @@ select c1 from t1
 where c1 between m and M
 -- this is the same as WHERE c1 >= m  and c1 <= M
 -- between includes the bounds
--- the set that contains the results is not disjunct 
+-- the set that contains the results is not disjunct
 ```
 
 We can also use the negation `not`:
@@ -380,7 +380,7 @@ When using `between` operator with dates that also include **timestamp** informa
 ```sql
 select c1 from t1
 where c1 between 'YY-MM-DD hh:mm:ss.sss' and 'YY-MM-DD hh:mm:ss.sss'
--- if not specified hh:mm:ss.sss is set to 00:00:00.000, which affects the logic of the upper bound! 
+-- if not specified hh:mm:ss.sss is set to 00:00:00.000, which affects the logic of the upper bound!
 ```
 
 ## 3.8. IN Operator
@@ -449,7 +449,7 @@ We can combine operations and clauses to create more complex queries.
 select * from customer
 where first_name like 'A%' and last_name not like 'B%'
 order by first_name
--- return all customers whose name start with an 'A' and last name does not start with a 'B'. Order the results ascending by the first name. 
+-- return all customers whose name start with an 'A' and last name does not start with a 'B'. Order the results ascending by the first name.
 ```
 
 # 4. General Challenge 1
@@ -464,7 +464,8 @@ where amount > 5
 How many actors have a first name that starts with the letter P?
 
 ```sql
-select count(first_name) from actor
+select count(distinct(actor_id))
+from actor
 where first_name ilike 'p%'
 ```
 
@@ -487,7 +488,7 @@ How many films have a rating of R and a replacement cost between $5 and $15? ([*
 ```sql
 select count(title) from film
 where rating = 'R' and replacement_cost between 5 and 15
--- note that rating is mpaa_rating data type 
+-- note that rating is mpaa_rating data type
 ```
 
 How many films have the word Truman somewhere in the title?
@@ -543,6 +544,16 @@ We can calculate the average cost:
 select round(avg(replacement_cost),2) from film
 ```
 
+Additionally, we can determine statistics in ordered sets with ordered-set aggregate functions using the keyword `within group`.
+
+```sql
+select
+	min(replacement_cost), percentile_disc(0.5) within group(order by replacement_cost), round(avg(replacement_cost),2), max(replacement_cost), mode() within group(order by replacement_cost)
+from
+	film
+```
+
+
 ## 5.2. GROUP BY Statement
 
 The `group by` statement allows us to aggregate columns per some category. We need to choose a categorical column to `group by`. Categorical columns are non-continuous. Keep in mind, they can still be numerical, such as cabin class categories on a ship (e.g. Class 1, Class 2, Class 3)
@@ -566,7 +577,7 @@ select company, division, sum(sales)
 -- sales won't appear in GROUP BY so we need an aggregate function to select it
 from finance_table
 group by company, division
--- this return the total number of sales per division per company 
+-- this return the total number of sales per division per company
 ```
 
 We can also add a `where` statement to the query. `where` statements should not refer to the aggregation result. Later on we'll use the `having` clause to filter on those results. The `having` clause was added to SQL because the `where` keyword cannot be used with aggregate functions. Example:
@@ -584,7 +595,7 @@ If we want to sort results based on the aggregate, we must reference the entire 
 ```sql
 select company, sum(sales)
 from finance_table
-group by company 
+group by company
 order by sum(sales) desc
 limit 5
 -- returns top 5 companies based on total sales
@@ -653,7 +664,7 @@ order by avg(replacement_cost) desc
 
 ```sql
 select customer_id, round(sum(amount),2)
-from payment 
+from payment
 group by customer_id
 order by sum(amount) desc
 limit 5
@@ -674,13 +685,13 @@ having sum(sales) > 1000
 Here we're aggregating sales per company. We can filter before executing the `group by` statement, since it's not being aggregated. We can not use `where` to filter based off of aggregate results, because the pgSQL aggregates after the `where` clause is executed. An additional filtering using aggregated results can be done with the `having` clause. Example:
 
 ```sql
-select customer_id, sum(amount) 
+select customer_id, sum(amount)
 from payment
 -- we remove some arbitrary customers by id
 where customer_id not in (184,87,477)
 group by customer_id
 having sum(amount) > 150
-order by sum(amount) desc 
+order by sum(amount) desc
 -- the restul is the records of the customer_id and sum amount, excluding some customers and where (having clause) the aggregated sum amount is bigger than 150, ordered by the descending sum amount
 ```
 
@@ -798,7 +809,7 @@ having sum(amount) > 150
 
 Note: column aliases are for better readability of the output, whereas table aliases are for better readability and structuring of the query.
 
-## 7.2. INNER JOIN Keyword (Intersection)
+## 7.2. (INNER) JOIN Keyword (Intersection)
 
 JOINs allow us to combine multiple tables together. The main reason for the different JOIN types is to decide how to deal with information only present in **one** of the joined tables.
 
@@ -810,7 +821,7 @@ from order
 -- from customer
 inner join customer on order.customer_id = customer.customer_id
 -- in this syntax, the INNER keyword is optional
--- inner join order ... 
+-- inner join order ...
 -- the inner join is symmetrical: the order of the tables does not matter
 ```
 
@@ -831,11 +842,11 @@ inner join customer on payment.customer_id = customer.customer_id
 -- this shows only customer that have done a payment
 ```
 
-**Alternative**: 
+**Alternative**:
 
 ```sql
 select payment_id, email
-from payment 
+from payment
 join customer using(customer_id)
 ```
 
@@ -891,11 +902,11 @@ where order.customer_id is null or customer.customer_id is null
 Example:
 
 ```sql
-select * 
+select *
 from customer
 full outer join payment
 on customer.customer_id = payment.customer_id
-where customer.customer_id is null or payment.customer_id is null 
+where customer.customer_id is null or payment.customer_id is null
 
 -- we want to return (a) customer ids that are not present in the payment table (customer without historical payment data) and (b) customer ids that are not present in the customer table, but have done payments -> no customer has this property -> we're in compliance with this policy
 ```
@@ -1131,7 +1142,7 @@ Example:
 ```sql
 select extract(month from payment_date) as "Month"
 from payment
-group by extract(month from payment_date) 
+group by extract(month from payment_date)
 -- we can extract: year, quarter, month, week, day
 ```
 
@@ -1165,7 +1176,7 @@ from payment
 **Challenge**: During which months did payments occur? Format your answer to return back the full month name.
 
 ```sql
--- task: during which month did payments occur? 
+-- task: during which month did payments occur?
 
 -- select extract(month from payment_date) <- this returns the months as a number
 select to_char(payment_date, 'Month')
@@ -1183,7 +1194,7 @@ from payment
 Alternative (ordering the month chronologically):
 
 ```sql
--- task: during which month did payments occur? 
+-- task: during which month did payments occur?
 
 select distinct(extract(month from payment_date)) as "num_month", to_char(payment_date, 'Month')
 from payment
@@ -1201,7 +1212,7 @@ order by date_part
 **Challenge**: How many payments occurred on a Monday?
 
 ```sql
--- task: how many payments occured on a monday? 
+-- task: how many payments occured on a monday?
 
 select to_char(payment_date, 'day') as weekday, count(*)
 from payment
@@ -1281,7 +1292,7 @@ A sub query allows you to construct complex queries, essentially performing a qu
 
 ```sql
 select student, grade
-from test_score 
+from test_score
 -- return the data for all the students
 ```
 
@@ -1321,7 +1332,7 @@ The `exists` operator is used to test for existence of rows in a subquery. Typic
 select c1
 from t1
 where exists(
-  select c1 
+  select c1
   from t1
   where cond1
 )
@@ -1355,7 +1366,7 @@ where film_id in (
 order by title asc
 
 -- problem: we do not have the film id
--- solution: we grad the tile with the help of the inventory id. We get the film_id from the inventory and use it as a subquery. 
+-- solution: we grad the tile with the help of the inventory id. We get the film_id from the inventory and use it as a subquery.
 ```
 
 ```sql
@@ -1366,7 +1377,7 @@ from customer as c
 where exists (
  select *
  from payment as p
- where 
+ where
   p.customer_id = c.customer_id
   and p.amount > 11
 )
@@ -1381,7 +1392,7 @@ order by first_name
 
 select c.customer_id, c.first_name, c.last_name
 from payment as p, customer as c
-where 
+where
  p.customer_id = c.customer_id
  and p.amount > 11
 ```
@@ -1394,12 +1405,12 @@ from customer as c
 where not exists (
  select *
  from payment as p
- where 
+ where
   p.customer_id = c.customer_id
   and p.amount > 11
 )
 -- returns 591
--- returns customers that do not have any payment greater than 11 
+-- returns customers that do not have any payment greater than 11
 -- note that this query returns customers that do not exists in the subquery (NOT clients that have payments with an amount less than 11)
 ```
 
@@ -1495,10 +1506,10 @@ Alternatives:
 
 select f_left.title, f_right.title, f_right.length
 from film as f_left
-join film as f_right on 
+join film as f_right on
  f_left.length = f_right.length and
  f_left.film_id != f_right.film_id
- 
+
 order by f_right.length
 ```
 
@@ -1506,8 +1517,8 @@ order by f_right.length
 -- task: find all the pairs of films that have the same length (implicit self-join)
 
 select f_left.title, f_right.title, f_right.length
-from film as f_left, film as f_right 
-where 
+from film as f_left, film as f_right
+where
  f_left.length = f_right.length and
  f_left.title != f_right.title
 order by f_right.length
@@ -1550,15 +1561,15 @@ How can you produce a list of facilities that charge a fee to members, and that 
 ```sql
 select fac_id, name, m_cost, maintenance
 from cd.facility
-where 
- m_cost > 0 
+where
+ m_cost > 0
  and m_cost < maintenance/50.0
 ```
 
 How can you produce a list of all facilities with the word 'Tennis' in their name?
 
 ```sql
-select * 
+select *
 from cd.facility
 where name ilike '%tennis%'
 ```
@@ -1582,7 +1593,7 @@ where join_date between '2012-09-01' and now()
 Alternative:
 
 ```sql
-select * 
+select *
 from cd.member
 where join_date::date >= '2012-09-01'
 ```
@@ -1675,7 +1686,7 @@ How can you produce a list of the start times for bookings for tennis courts, fo
 select b.start_time, f.name
 from cd.booking as b
 join cd.facility as f on b.fac_id = f.fac_id
-where 
+where
  b.start_time::date = '2012-09-21'
  and f.name ilike '%tennis%court%'
 order by b.start_time
@@ -1688,7 +1699,7 @@ Alternative:
 select start_time, f.name
 from cd.booking as b
 join cd.facility as f on b.fac_id = f.fac_id
-where 
+where
   start_time between '2012-09-21' and '2012-09-22'
   and f.name ilike '%tennis%court%'
 order by start_time
@@ -1700,7 +1711,7 @@ How can you produce a list of the start times for bookings by members named 'Dav
 select start_time
 from cd.booking as b
 join cd.member as m on b.mem_id = m.mem_id
-where 
+where
  m.first_name = 'David'
  and m.last_name = 'Farrell'
 ```
@@ -1788,7 +1799,7 @@ CREATE TABLE table_name(
   column_name TYPE column_constraint,
   column_name TYPE column_constraint,
   table_constraint table_constraint
-) 
+)
 INHERITS existing_table_name;
 ```
 
@@ -1796,7 +1807,7 @@ Example:
 
 ```sql
 create table player(
-  player_id serial primary key, 
+  player_id serial primary key,
   age smallint not null
 )
 ```
@@ -1813,18 +1824,18 @@ We create a database (in the table we generate a password and an email column, s
 
 ```sql
 create table account(
- user_id serial primary key, 
- username varchar(50) unique not null, 
- password varchar(50) not null, 
- email varchar(255) unique not null, 
- create_date timestamp not null, 
+ user_id serial primary key,
+ username varchar(50) unique not null,
+ password varchar(50) not null,
+ email varchar(255) unique not null,
+ create_date timestamp not null,
  last_login timestamp
 )
 ```
 
 ```sql
 create table job(
- job_id serial primary key, 
+ job_id serial primary key,
  job_name varchar(255) unique not null
 )
 ```
@@ -1845,7 +1856,7 @@ The `insert into` statement is used to insert new records in a table. General sy
 ```sql
 insert into table(col1, col2, ...)
 values
-  (val1_1, val2_1, ...), 
+  (val1_1, val2_1, ...),
   (val1_2, val2_2, ...)
   ...
 ```
@@ -1887,7 +1898,7 @@ The `update` statement is used to modify the existing records in a table. Genera
 
 ```sql
 update table
-set 
+set
   col1 = val1,
   col2 = val2,
   ...
@@ -1928,7 +1939,7 @@ where table_left.id = table_right.id
 We can also return the affected rows:
 
 ```sql
-update account 
+update account
 set last_login = create_date
 returning account_id, last_login
 ```
@@ -1938,13 +1949,13 @@ Examples:
 ```sql
 update account
 set last_login = now()
-returning * 
+returning *
 ```
 
 ```sql
 update account
 set last_login = create_date
-returning * 
+returning *
 
 ```
 
@@ -1953,7 +1964,7 @@ update account_job as aj
  set hire_date = a.create_date
 from account as a
  where a.user_id = aj.user_id
-returning * 
+returning *
 ```
 
 **Note**: Be careful when updating records in a table! Notice the `wher` clause in the `update` statement. The `where` clause specifies which record(s) should be updated. If you omit the `where` clause, all records in the table will be updated!
@@ -2067,7 +2078,7 @@ The `check` constraint is used to limit the value range that can be placed in a 
 
 ```sql
 create table example(
-  id serial primary key, 
+  id serial primary key,
   age smallint check (age > 21),
   parent_age smallint check (parent_age > age)
 )
@@ -2078,8 +2089,8 @@ Example:
 ```sql
 create table employee(
  emp_id serial primary key,
- fist_name varchar(50) not null, 
- last_name varchar(50) not null, 
+ fist_name varchar(50) not null,
+ last_name varchar(50) not null,
  birthdate date check(birthdate > '1900-01-01'),
  hire_date date check(hire_date > birthdate),
  salary int check (salary > 0)
@@ -2104,24 +2115,24 @@ Solution:
 
 ```sql
 create table student(
- student_id serial primary key, 
- first_name varchar(50) not null, 
- last_name varchar(50) not null, 
+ student_id serial primary key,
+ first_name varchar(50) not null,
+ last_name varchar(50) not null,
  homeroom_nr varchar(50),
- phone varchar(50), 
- email varchar(255), 
+ phone varchar(50),
+ email varchar(255),
  grad_year date
 )
 ```
 
 ```sql
 create table teacher(
- teacher_id serial primary key, 
- first_name varchar(50) not null, 
- last_name varchar(50) not null, 
+ teacher_id serial primary key,
+ first_name varchar(50) not null,
+ last_name varchar(50) not null,
  homeroom_nr smallint,
- department varchar(255), 
- email varchar(255), 
+ department varchar(255),
+ email varchar(255),
  phone varchar(255)
 )
 ```
@@ -2141,19 +2152,19 @@ alter column homeroom_nr type smallint using (homeroom_nr::smallint)
 ```sql
 -- add unique constraint to phone and email columns (contraint will be assign to one name!)
 alter table student
-add unique(phone, email) 
+add unique(phone, email)
 ```
 
 ```sql
 insert into student(
  first_name,
- last_name, 
+ last_name,
  phone,
- grad_year, 
+ grad_year,
  homeroom_nr
 )
 values(
- 'Mark', 
+ 'Mark',
  'Watney',
  '777-555-1234',
  2035,
@@ -2164,10 +2175,10 @@ values(
 ```sql
 insert into teacher(
  first_name,
- last_name, 
- homeroom_nr, 
+ last_name,
+ homeroom_nr,
  department,
- email, 
+ email,
  phone
 )
 values(
@@ -2217,11 +2228,11 @@ Example:
 
 ```sql
 select a
-case 
+case
   when a = 1 then 'one'
-  -- if the instance is equal to one, return the string 'one' 
+  -- if the instance is equal to one, return the string 'one'
   when a = 2 then 'two'
-  else 'other' 
+  else 'other'
 end -- as new_col_name
 from test
 -- this generates a new column named 'Case'
@@ -2256,14 +2267,14 @@ from test
 Example:
 
 ```sql
-select customer_id, 
+select customer_id,
 case
  when (customer_id <= 100 ) then 'Premium'
  when (customer_id between 101 and 200) then 'Plus'
  else 'Normal'
 end as tier
 from customer
-order by customer_id 
+order by customer_id
 ```
 
 ```sql
@@ -2292,15 +2303,15 @@ We can reformat the results of the query above with the `case` statement:
 -- we can perform opeartions on the results of the case statements
 
 ```sql
-select 
+select
 sum(case rental_rate
  when 0.99 then 1
  else 0
-end) as bargains, 
+end) as bargains,
 sum(case rental_rate
  when 2.99 then 1
  else 0
-end) as regular, 
+end) as regular,
 sum(case rental_rate
  when 4.99 then 1
  else 0
@@ -2311,22 +2322,22 @@ from film
 **Challenge**: We want to know and compare the various amounts of films we have per movie rating. Use `case` and the dvdrental database:
 
 ```sql
-select 
+select
  sum(
   case rating
   when 'NC-17' then 1
   else 0
-  end) as nc17, 
+  end) as nc17,
  sum(
   case rating
   when 'G' then 1
   else 0
-  end ) as g, 
+  end ) as g,
  sum(
   case rating
   when 'PG' then 1
   else 0
-  end) as pg, 
+  end) as pg,
  sum(
   case rating
   when 'PG-13' then 1
@@ -2348,7 +2359,7 @@ The `coalesce` function accepts an unlimited number of arguments. It returns the
 coalesce(arg_1,...,arg_n)
 ```
 
-The `coalesce` function becomes useful when querying a table that contains null values and substituting it with another value. Example: 
+The `coalesce` function becomes useful when querying a table that contains null values and substituting it with another value. Example:
 
 ```sql
 select item, (price-discount) as final_price
@@ -2356,7 +2367,7 @@ from price_table
 -- this query returns null as the final_price if the discount is null
 ```
 
-This becomes: 
+This becomes:
 
 ```sql
 select item, (price-coalesce(discount,0)) as final price
@@ -2366,7 +2377,7 @@ from price_table
 
 ## 12.3. CAST() Function
 
-The `cast` operator let's you convert from one data type into another. Keep in mind not every instance of a data type can be `cast` to another data type, it must be reasonable to convert the data, for example '5' to an integer will work, 'five' to an integer will not. There are two options: 
+The `cast` operator let's you convert from one data type into another. Keep in mind not every instance of a data type can be `cast` to another data type, it must be reasonable to convert the data, for example '5' to an integer will work, 'five' to an integer will not. There are two options:
 
 ```sql
 select cast('5' as int)
@@ -2380,7 +2391,7 @@ select '5'::int
 
 The NULLIF function takes in 2 arguments and returns `null` if both are equal, otherwise it returns the first argument passed.
 
-Example: 
+Example:
 ```sql
 nullif(10,10)
 -- returns null
@@ -2388,7 +2399,7 @@ nullif(10,10)
 
 This becomes very useful in cases where a `null` value would cause an error or unwanted result.
 
-Example: Given this table calculate the ratio of department A to deparment B. 
+Example: Given this table calculate the ratio of department A to deparment B.
 
 | Name    | Dept |
 | ------- | ---- |
@@ -2400,21 +2411,21 @@ Example: Given this table calculate the ratio of department A to deparment B.
 select(
 	sum(case when dept = 'A' then 1 else 0 end)/
 	sum(case when dept = 'B' then 1 else 0 end)
-) as dept_ratio 
+) as dept_ratio
 from dept
 ```
 
-But what happens when department B has no people? 
+But what happens when department B has no people?
 
 ```sql
 select(
 	sum(case when dept = 'A' then 1 else 0 end)/
 	nullif(sum(case when dept = 'B' then 1 else 0 end),0)
-) as dept_ratio 
+) as dept_ratio
 from dept
 ```
 
-If the denominator is 0 we return a null. 
+If the denominator is 0 we return a null.
 
 ## 12.5. (CREATE) VIEW Statement
 
@@ -2437,49 +2448,49 @@ Becomes:
 select * from view
 ```
 
-A view is a database object that is of a stored query. A view can be accessed as a virtual table in PostgreSQL. Notice that a view does not store data physically, it simply stores the query. It transforms a complex query into a (virtual table). You can also update and alter existing views. 
+A view is a database object that is of a stored query. A view can be accessed as a virtual table in PostgreSQL. Notice that a view does not store data physically, it simply stores the query. It transforms a complex query into a (virtual table). You can also update and alter existing views.
 
-Examples: 
+Examples:
 
 ```sql
-create view customer_info as 
+create view customer_info as
 select first_name, last_name, address
 from customer as c
-join address as a 
+join address as a
 on c.address_id = a.address_id
 ```
 
-Afterwards we can call: 
+Afterwards we can call:
 
 ```sql
 select * from customer_info
 ```
 
-To modify the view we can: 
+To modify the view we can:
 
-```sql 
-create or replace view customer_info as 
+```sql
+create or replace view customer_info as
 select first_name, last_name, address, district
 from customer as c
-join address as a 
+join address as a
 on c.address_id = a.address_id
 ```
 
 To drop / delete / remove the view we can (check first if it exists to prevent errors):
 
 ```sql
-drop view if exists customer_info 
+drop view if exists customer_info
 ```
 
-To rename: 
+To rename:
 
-```sql 
+```sql
 alter view customer_info rename to customer_info_new
 ```
 
 # 13. Import and Export
 
-Useful links: 
+Useful links:
 
 - [Documentation on COPY Function](https://www.postgresql.org/docs/current/sql-copy.html)
 - [How to import CSV file data into a PgSQL table?](https://stackoverflow.com/questions/2987433/how-to-import-csv-file-data-into-a-postgresql-table)
@@ -2490,13 +2501,13 @@ Not every outside data file will work, variations in formatting, macros, data ty
 
 The Import command DOES NOT create a table for you. It assumes a table is already created. Currently there is no automated way within pgAdmin to create table directly from a `.csv` file.
 
-Import example: 
+Import example:
 
 ```sql
 command " "\\copy public.simple (id, a, b, c) FROM '/Users/aceituno/Desktop/projects-ss21/sql/simple_table.csv' DELIMITER ',' CSV HEADER QUOTE '\"' ESCAPE '''';""
 ```
 
-We imported twice so we deleted duplicates with: 
+We imported twice so we deleted duplicates with:
 
 ```sql
 -- task: delete duplicates
@@ -2510,13 +2521,13 @@ delete from simple ls using(
 ) rs
 where ls.id = rs.id
 and ls.ctid <> rs.ctid
-	  
+
 -- The USING clause is a shorthand that allows you to take advantage of the specific situation where both sides of the join use the same name for the joining column(s). It takes a comma-separated list of the shared column names and forms a join condition that includes an equality comparison for each one. For example, joining T1 and T2 with USING (a, b) produces the join condition ON T1.a = T2.a AND T1.b = T2.b.
 
 -- ctid: The physical location of the row version within its table. Note that although the ctid can be used to locate the row version very quickly, a row's ctid will change each time it is updated or moved by VACUUM FULL. Therefore ctid is useless as a long-term row identifier. The OID, or even better a user-defined serial number, should be used to identify logical rows.
 ```
 
-**Logic of deleting duplicates**: 
+**Logic of deleting duplicates**:
 
 ```sql
 -- general delete syntax
@@ -2564,8 +2575,8 @@ select * from "table1" where "column1"='name1';
 - Additional PgSQL keywords and functions:
   - length()
   - offset
-- [PgSQL Pattern Matching](https://www.postgresql.org/docs/13/functions-matching.html): Be wary of accepting regular-expression search patterns from hostile sources. If you must do so, it is advisable to impose a statement timeout.  
-Searches using `SIMILAR TO` patterns have the same security hazards, since `SIMILAR TO` provides many of the same capabilities as POSIX-style regular expressions.  
+- [PgSQL Pattern Matching](https://www.postgresql.org/docs/13/functions-matching.html): Be wary of accepting regular-expression search patterns from hostile sources. If you must do so, it is advisable to impose a statement timeout.
+Searches using `SIMILAR TO` patterns have the same security hazards, since `SIMILAR TO` provides many of the same capabilities as POSIX-style regular expressions.
 `LIKE` searches, being much simpler than the other two options, are safer to use with possibly-hostile pattern sources.
 - [W3 SQL Tutorial](https://www.w3schools.com/sql/default.asp)
 - [Full Text Search PostgreSQL](https://www.youtube.com/watch?v=szfUbzsKvtE)
@@ -2573,7 +2584,7 @@ Searches using `SIMILAR TO` patterns have the same security hazards, since `SIMI
 - [Official Tutorials and Other Resources](https://www.postgresql.org/docs/online-resources/)
 - [EDB Offer](https://www.enterprisedb.com/training/free-postgres-training)
 - [Tutorials point](https://www.tutorialspoint.com/postgresql/)
-- [Show all tables](https://www.postgresqltutorial.com/postgresql-show-tables/):  
+- [Show all tables](https://www.postgresqltutorial.com/postgresql-show-tables/):
 
 ```sql
 SELECT * FROM pg_catalog.pg_tables
@@ -2589,3 +2600,4 @@ WHERE schemaname != 'pg_catalog' AND
 - [Transpose Results](https://stackoverflow.com/questions/23060256/postgres-transpose-rows-to-columns)
 - [Dollar Quoting](https://stackoverflow.com/questions/12144284/what-are-used-for-in-pl-pgsql)
 - [Delete duplicate records](https://stackoverflow.com/questions/6583916/delete-duplicate-rows-from-small-table)
+- [Creating multiple tables with sqlite3](https://gist.github.com/iampramodyadav/793ec2b0ea71c3bcbfd6deea636907e2)

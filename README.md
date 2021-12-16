@@ -547,10 +547,8 @@ select round(avg(replacement_cost),2) from film
 Additionally, we can determine statistics in ordered sets with ordered-set aggregate functions using the keyword `within group`.
 
 ```sql
-select
-	min(replacement_cost), percentile_disc(0.5) within group(order by replacement_cost), round(avg(replacement_cost),2), max(replacement_cost), mode() within group(order by replacement_cost)
-from
-	film
+select min(replacement_cost), percentile_disc(0.5) within group(order by replacement_cost), round(avg(replacement_cost),2), max(replacement_cost), mode() within group(order by replacement_cost)
+from film
 ```
 
 
@@ -561,10 +559,10 @@ The `group by` statement allows us to aggregate columns per some category. We ne
 After choosing the categorical column we're essentially **splitting** the table up on a per category basis in n subtables. We can then **aggregate** the columns in the subtables with an aggregate function. Basic syntax:
 
 ```sql
-select cat_col, "agg"(data_col) from t1
-where cat_col != 'A'
+select cat_col, add_function(data_col)
+from table_
+where condition_on_cat_col
 group by cat_col
--- "agg" is a placeholder for some aggregate function
 -- the GROUP BY statement must appear right after the FROM or WHERE statement
 ```
 
@@ -580,6 +578,17 @@ group by company, division
 -- this return the total number of sales per division per company
 ```
 
+Another example from our database:
+
+```sql
+select rental_duration, rating, round(avg(replacement_cost),2), percentile_disc(0.5) within group(order by replacement_cost)
+from film
+group by rental_duration, rating
+order by rental_duration, rating
+-- return the average and median replacement cost per rental duration per rating
+```
+
+
 We can also add a `where` statement to the query. `where` statements should not refer to the aggregation result. Later on we'll use the `having` clause to filter on those results. The `having` clause was added to SQL because the `where` keyword cannot be used with aggregate functions. Example:
 
 ```sql
@@ -588,6 +597,17 @@ from finance_table
 where division in ('marketing', 'transport')
 -- where cannot be used with aggregate function
 group by company, division
+```
+
+Another example from our database:
+
+```sql
+select rating, round(avg(replacement_cost),2), percentile_disc(0.5) within group(order by replacement_cost)
+from film
+where rating in ('R','NC-17')
+group by rating
+order by rating
+-- returns average and median replacement cost for the ratings R and NC-17
 ```
 
 If we want to sort results based on the aggregate, we must reference the entire function. Example:
@@ -610,13 +630,15 @@ group by customer_id
 -- the result is the same as SELECT distinct(customer_id) FROM payment
 ```
 
-We want to find out what customer spent the most money:
+We want to find out the top 5 customers that spent the most money:
 
 ```sql
-select customer_id, sum(amount) from payment
+select customer_id, sum(amount)
+from payment
+-- where
 group by customer_id
 order by sum(amount) desc
--- this can be read as total sum amount per customer id
+limit 5
 ```
 
 We want to find out how many transaction occurred per customer:
@@ -644,11 +666,33 @@ order by sum(amount) desc
 -- note that the payment_date is a timestamp -> we remove the time with the date() function
 ```
 
+Another example; find out the date with the most sum amount after April 29, 2007:
+
+```sql
+select date(payment_date), sum(amount)
+from payment
+where date(payment_date) > '2007-04-29'
+group by date(payment_date)
+order by sum(amount) desc
+-- limit 5
+```
+
 **Challenge**: We have two staff members, with Staff IDs 1 and 2. We want to give a bonus to the staff member that handled the most payments. (Most in terms of number of payments processed, not total dollar amount). How many payments did each staff member handle and who gets the bonus?
 
 ```sql
 select staff_id, count(payment_id) from payment
 group by staff_id
+```
+
+Alternative solution:
+
+```sql
+select staff_id, count(distinct(payment_id))
+from payment
+where staff_id in (1,2)
+group by staff_id
+order by count(distinct(payment_id)) desc
+-- limit 5
 ```
 
 **Challenge**: Corporate HQ is conducting a study on the relationship between replacement cost and a movie MPAA rating. What is the average replacement cost per MPAA rating?

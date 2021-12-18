@@ -71,7 +71,16 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [12.5. (CREATE) VIEW Statement](#125-create-view-statement)
 - [13. Import and Export](#13-import-and-export)
 - [14. PgSQL with Python](#14-pgsql-with-python)
-- [15. Misc](#15-misc)
+- [15. SQL Window Function Part 1](#15-sql-window-function-part-1)
+  - [15.1. Fundamentals, the Over Clause and Partition By](#151-fundamentals-the-over-clause-and-partition-by)
+  - [15.2. Other examples and Row Number and Order By (inside Over Clause)](#152-other-examples-and-row-number-and-order-by-inside-over-clause)
+  - [15.3. Window Functions: Rank, Dense Rank](#153-window-functions-rank-dense-rank)
+  - [15.4. Window Functions: Lead and Lag](#154-window-functions-lead-and-lag)
+- [16. SQL Window Function Part 2](#16-sql-window-function-part-2)
+  - [16.1. First and Last Value](#161-first-and-last-value)
+- [17. Solutions to SQL Exercise](#17-solutions-to-sql-exercise)
+- [18. Misc Notes](#18-misc-notes)
+  - [18.1. Misc Notes from Revision](#181-misc-notes-from-revision)
 
 <!-- update number, TOC -->
 
@@ -807,6 +816,20 @@ order by customer_id desc
 limit 1
 ```
 
+Wrong answer:
+
+```sql
+select max(customer_id), first_name, last_name
+from customer
+where first_name ilike 'E%'
+	and address_id < 5000
+-- group by
+-- having
+-- order by
+-- limit
+```
+
+
 # 7. JOIN Clause
 
 JOINS will allow us to combine information from multiple tables. See [documentation](https://www.postgresql.org/docs/9.2/queries-table-expressions.html).
@@ -861,9 +884,7 @@ The `inner join` keyword selects records that have matching values in both table
 
 ```sql
 select order.order_id, customer.first_name
-from order
--- from customer
-inner join customer on order.customer_id = customer.customer_id
+from order inner join customer on order.customer_id = customer.customer_id
 -- in this syntax, the INNER keyword is optional
 -- inner join order ...
 -- the inner join is symmetrical: the order of the tables does not matter
@@ -881,17 +902,16 @@ Example: we want to join the payment and customer table.
 
 ```sql
 select payment.payment_id, payment.customer_id, customer.email
-from payment
-inner join customer on payment.customer_id = customer.customer_id
+from payment inner join customer on payment.customer_id = customer.customer_id
 -- this shows only customer that have done a payment
 ```
 
-**Alternative**:
+**Alternative in PostgreSQL**:
 
 ```sql
-select payment_id, email
-from payment
-join customer using(customer_id)
+select p.payment_id, c.first_name
+-- from payment as p inner join customer as c on p.customer_id = c.customer_id
+from payment as p join customer as c using(customer_id)
 ```
 
 The words `inner` and `outer` are optional in all forms. `inner` is the default; `left`, `right`, and `full` imply an outer join.
@@ -972,7 +992,7 @@ on order.customer_id = customer.customer_id
 | set   | id_A | id_B |
 | ----- | ---- | ---- |
 | A ∩ B | ...  | ...  |
-| A     | ...  | NULL |
+| A \ B    | ...  | NULL |
 
 We can further qualify the statement with a `full left join` with `where` (and the help of `null` values): get rows unique to left table. What if we only wanted entries unique to Table A? Those rows found Table A and not found in Table B.
 
@@ -989,7 +1009,7 @@ where customer.customer_id is null
 
 | set | id_A | id_B |
 | --- | ---- | ---- |
-| A   | ...  | NULL |
+| A \ B   | ...  | NULL |
 
 Example:
 
@@ -1015,6 +1035,16 @@ where inventory.film_id is null
 -- this returns the films that are in our films table but not in our inventory
 ```
 
+Alternative to example:
+
+```sql
+select count(distinct(f.film_id))
+	-- f.film_id, i.film_id, f.title
+from film as f left join inventory as i on f.film_id = i.film_id
+where i.film_id is null
+-- # of films that are not in our inventory
+```
+
 ## 7.5. RIGHT (OUTER) JOIN Keyword (B)
 
 A `right join` is essentially the same as a `left join`, except the tables are switched. This would be the same as switching the table order in `left join`.
@@ -1032,7 +1062,7 @@ on order.customer_id = customer.customer_id
 | set   | id_A | id_B |
 | ----- | ---- | ---- |
 | A ∩ B | ...  | ...  |
-| B     | NULL | ...  |
+| B \ A    | NULL | ...  |
 
 We can add a `where` qualifier:
 
@@ -1049,7 +1079,7 @@ where order.customer_id is null
 
 | set | id_A | id_B |
 | --- | ---- | ---- |
-| B   | NULL | ...  |
+| B \ A   | NULL | ...  |
 
 ## 7.6. UNION Operator
 
@@ -1090,6 +1120,15 @@ where address.district = 'California'
 -- this query returns the same information if we perform an inner join; we perform a right join to make sure that there is no person in California that does not have an email in the database
 ```
 
+Alternative:
+
+```sql
+select a.district, c.email
+from address as a join customer as c on a.address_id = c.address_id
+where a.district ilike 'california'
+order by c.email asc
+```
+
 **Challenge**: A customer walks in and is a huge fan of the actor "Nick Wahlberg" and wants to know which movies he is in. Get a list of all the movies "Nick Wahlberg" has been in.
 
 ```sql
@@ -1103,6 +1142,23 @@ join film_actor
 join film
  on film.film_id = film_actor.film_id
 where actor.first_name = 'Nick' and actor.last_name = 'Wahlberg'
+```
+
+Alternative:
+
+```sql
+select
+	f.title, a.first_name, a.last_name
+from film_actor as fa
+	join actor as a on fa.actor_id = a.actor_id
+	join film as f on f.film_id = fa.film_id
+where
+	a.first_name ilike 'nick' and
+	a.last_name ilike 'wahlberg'
+-- group by
+-- having
+order by f.title asc
+-- limit
 ```
 
 # 8. Advanced SQL Commands
@@ -1141,22 +1197,21 @@ Let's explore functions and operations related to these specific data types:
 We use the [`show`](https://www.postgresql.org/docs/current/sql-show.html) function:
 
 ```sql
--- show all
--- show timezone
+show all
+show timezone
 -- show runtime parameters
 
--- select now()
+select now()
 -- return timestamp
 
--- select timeofday()
+select timeofday()
 -- return string representation of timestamp
 
--- select current_time
+select current_time
 -- return time with timezone
 
--- select current_date
+select current_date
 -- return date
-
 ```
 
 ### 8.1.2. Extracting Time and Date Information
@@ -1167,7 +1222,7 @@ Let's explore extracting information from a time based data type using:
 - `age()`
 - `to_char()`
 
-`extract(field FROM source)` allows you to "extract" or obtain a sub-component of a date value. Valid values for field can be found in the [documentation](https://www.postgresql.org/docs/13/functions-datetime.html).Basic syntax:
+`extract(field FROM source)` allows you to "extract" or obtain a sub-component of a date value. Valid values for field can be found in the [documentation](https://www.postgresql.org/docs/13/functions-datetime.html). Basic syntax:
 
 ```sql
 extract(year from date_col)
@@ -2599,10 +2654,227 @@ having count(*)>1
 
 In this section of the course I'll give you a quick overview of how to use the psycopg2 library with Python to interact with a database in PostgreSQl with Python.
 
+# 15. SQL Window Function Part 1
 
-# 15. Misc
+## 15.1. Fundamentals, the Over Clause and Partition By
+From [SQL Window Function](https://www.youtube.com/watch?v=Ww71knvhQ-s). [Documentation on Window Function](https://www.postgresql.org/docs/current/tutorial-window.html). [Documentation on Window Functions](https://www.postgresql.org/docs/8.4/functions-window.html).
 
-Misc notes:
+A window function performs a calculation across a set of table rows that are somehow related to the current row. This is comparable to the type of calculation that can be done with an aggregate function. However, window functions do not cause rows to become grouped into a single output row like non-window aggregate calls would. Instead, the rows retain their separate identities. For example these queries:
+
+```sql
+select max(salary) as max_salary
+from employee
+```
+
+```sql
+select dept_name, max(salary) as max_salary_per_department
+from employee
+group by dept_name
+```
+Become these:
+
+```sql
+select e.*, max(salary) over() as max_salary
+from employee as e
+-- the over clause with no parameter produces a window of the whole table
+```
+
+```sql
+select e.*, max(salary) over( partition by dept_name ) as max_salary_per_dept
+from employee as e
+-- shows max salary per deparment in addition to employee data
+```
+
+Notes that the  rows considered by a window function are those of the “*virtual table*” produced by the query's `FROM` clause (as filtered by its `WHERE`, `GROUP BY`, and `HAVING` clauses if any). For example, a row removed because it does not meet the WHERE condition is not seen by any window function.
+
+## 15.2. Other examples and Row Number and Order By (inside Over Clause)
+
+```sql
+select e.*, row_number() over() as rn
+from employee e
+-- gives each record a unique identifier; to use it, we can pass the query as a subquery
+```
+
+```sql
+select e.*, row_number() over( partition by dept_name ) over() as rn
+from employee e
+-- gives each record per department an identifier
+```
+
+Note that You can also control the order in which rows are processed by window functions using ORDER BY within OVER. (The window ORDER BY does not even have to match the order in which the rows are output.) Here is an example:
+
+```sql
+SELECT depname, empno, salary, rank() OVER (PARTITION BY depname ORDER BY salary DESC)
+FROM empsalary
+```
+
+From our previous example
+
+```sql
+select e.*, row_number() over(partition by dept_name order by emp_id) as rn
+from employee e
+-- We make the assumption that emp_id reflects when the employee joined the company
+```
+
+We use this query as a subquery to fetch the first 2 employees from each department to join the company
+
+```sql
+select *
+from
+  (select e.*, row_number() over(partition by dept_name order by emp_id) as rn from employee e) sq
+where hq.rn < 3
+```
+
+## 15.3. Window Functions: Rank, Dense Rank
+
+```sql
+select e.*, rank() over(partition by dept_name order by salary desc) as rnk
+from employee e
+```
+
+We use this subquery to determine the employees with the top 3 salaries per department
+
+```sql
+select *
+from (select e.*, rank() over(partition by dept_name order by salary desc) as rnk
+from employee e) sq
+where sq.rnk < 4
+```
+
+```sql
+select e.*, rank() over(partition by dept_name order by salary desc) as rnk, dense_rank() over(partition by dept_name order by salary desc) as dense_rnk
+from employee e
+```
+
+Alternative:
+
+```sql
+select e.*, rank() over w as rnk, dense_rank() over w as dense_rnk
+from employee e
+window w as over(partition by dept_name order by salary desc)
+```
+
+Note that when a query involves multiple window functions, it is possible to write out each one with a separate OVER clause, but this is duplicative and error-prone if the same windowing behavior is wanted for several functions. Instead, each windowing behavior can be named in a WINDOW clause and then referenced in OVER. For example:
+
+```sql
+SELECT sum(salary) OVER w, avg(salary) OVER w
+  FROM empsalary
+  WINDOW w AS (PARTITION BY depname ORDER BY salary DESC);
+```
+
+## 15.4. Window Functions: Lead and Lag
+
+Task: Fetch a query to display if the salary of an employee is higher, lower or equal to the previous employee. **Preparation**:
+
+```sql
+select e.*, lag(salary) over (partition over dept_name order by emp_id) as prev_emp_salary
+from employee e
+```
+
+We can pass some other arguments with the lag function (see [Documentation](https://www.postgresql.org/docs/8.4/functions-window.html)).
+
+```sql
+select e.*, lag(salary,2,0) over (partition over dept_name order by emp_id) as prev_emp_salary
+from employee e
+```
+
+Lead gives us the rows that are following the current row.
+
+```sql
+select e.*, lead(salary) over (partition over dept_name order by emp_id) as next_emp_salary
+from employee e
+```
+
+**Solution**:
+
+```sql
+select
+  e.*,
+  lag(salary) over w as prev_emp_salary,
+  case
+    when e.salary > lag(salary) over w then 'Higher than previous employee'
+    when e.salary < lag(salary) over w then 'Lower than previous employee'
+    when e.salary = lag(salary) over w then 'Same as previous employee'
+  end sal_range
+from employee e
+window w as (partition over dept_name order by emp_id)
+```
+
+Another example from our database:
+
+```sql
+select
+	p.*,
+	lag(amount) over w1 as prev_amount,
+	case
+		when amount > lag(amount) over w2 then 'Higher than previous amount'
+		when amount < lag(amount) over w2 then 'Lower than previous amount'
+		when lag(amount) over w2  is null then 'No info'
+		else 'The same as previous amount'
+	end as amount_range
+from payment p
+window w1 as (partition by customer_id order by payment_date), w2 as (partition by customer_id order by payment_date)
+-- note that w1 and w2 are identical
+```
+
+The same example more concise:
+
+```sql
+select
+	p.*,
+	lag(amount) over w as prev_amount,
+	case
+		when amount > lag(amount) over w then 'Higher than previous amount'
+		when amount < lag(amount) over w then 'Lower than previous amount'
+		when lag(amount) over w  is null then 'No info'
+		else 'The same as previous amount'
+	end as amount_range
+from payment p
+window w as (partition by customer_id order by payment_date)
+```
+
+# 16. SQL Window Function Part 2
+
+## 16.1. First and Last Value
+
+[Documentation on Window Functions](https://www.postgresql.org/docs/8.4/functions-window.html). Task: Write a query to display the most expensive product under each category (corresponding ot each record).
+
+```sql
+select p.*, first_value(product_name) over(partition by product_category order by price desc) as most_exp_per_category
+from product p
+```
+
+Example from DVD rental data:
+
+```sql
+select distinct(customer_id), first_value(payment_id) over(partition by customer_id order by amount desc) as most_exp_payment
+from payment p
+order by customer_id
+```
+
+This window function does the same as the following `group by` and aggregate function.
+
+```sql
+select customer_id, payment_id
+from payment p
+group by customer_id, payment_id
+having amount = max(amount)
+order by customer_id
+```
+
+# 17. Solutions to SQL Exercise
+
+```sql
+select distinct(event_type), nth_value(delta, 1) over(partition by event_type) as value
+from
+	(select e.*, lag(value) over( partition by event_type order by time desc) - value as delta
+	from events e
+	order by event_type) delta
+where delta is not null
+order by event_type
+```
+
+# 18. Misc Notes
 
 - [SQL Cheat Sheet](https://www.sqltutorial.org/wp-content/uploads/2016/04/SQL-cheat-sheet.pdf):
   - `limit` n `offset` m: skip m row and return the next n rows.
@@ -2645,3 +2917,16 @@ WHERE schemaname != 'pg_catalog' AND
 - [Dollar Quoting](https://stackoverflow.com/questions/12144284/what-are-used-for-in-pl-pgsql)
 - [Delete duplicate records](https://stackoverflow.com/questions/6583916/delete-duplicate-rows-from-small-table)
 - [Creating multiple tables with sqlite3](https://gist.github.com/iampramodyadav/793ec2b0ea71c3bcbfd6deea636907e2)
+
+## 18.1. Misc Notes from Revision
+
+- `not` keyword appears before the condition
+- `order by`-columns also appears in `select`-column
+- if we `group by` -> `select`-columns appear in:
+  - `group by`-statement OR
+  - are in an aggregate function
+- column in `select` -> column in `group by`
+- aggregate function appear in:
+  - `select` OR
+  - `having`
+

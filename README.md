@@ -86,8 +86,11 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [16.7. Percent Rank](#167-percent-rank)
 - [17. SQL With Clause and CTE (Common Table Expression) or Sub-Query Factoring](#17-sql-with-clause-and-cte-common-table-expression-or-sub-query-factoring)
 - [18. Practice Complex SQL Queries](#18-practice-complex-sql-queries)
-  - [18.1. Exercise 1:](#181-exercise-1)
+  - [18.1. Exercise 1](#181-exercise-1)
   - [18.2. Exercise 2](#182-exercise-2)
+  - [Exercise 3](#exercise-3)
+  - [Exercise 4](#exercise-4)
+  - [Exercise 5](#exercise-5)
 - [19. Misc Notes](#19-misc-notes)
   - [19.1. Misc Notes from Revision](#191-misc-notes-from-revision)
 - [20. Solutions to Codility Exercise](#20-solutions-to-codility-exercise)
@@ -3167,7 +3170,7 @@ where revenue_per_store > avg_revenue
 
 From [Practice Complex SQL Queries](https://www.youtube.com/watch?v=FNYdBLwZ6cE).
 
-## 18.1. Exercise 1:
+## 18.1. Exercise 1
 
 ```sql
 -- Query 1:
@@ -3217,7 +3220,7 @@ group by user_name, email
 
 ```sql
 -- Query 2:
--- Write a SQL query to fetch the second to last record from a employee table.
+-- Write a SQL query to fetch the second record from a employee table.
 
 --Tables Structure:
 -- drop table employee;
@@ -3254,6 +3257,198 @@ insert into employee values(124, 'Dheeraj', 'IT', 11000);
 
 select * from employee;
 ```
+
+Solution:
+
+```sql
+with rn as (
+	select *, row_number() over(order by emp_id) as rn
+	from employee
+)
+
+select *
+from rn
+where rn = 2
+```
+
+## Exercise 3
+
+```sql
+-- Query 3:
+
+-- Write a SQL query to display only the details of employees who either earn the highest salary or the lowest salary in each department from the employee table.
+
+--Tables Structure:
+
+drop table employee;
+create table employee
+( emp_ID int primary key
+, emp_NAME varchar(50) not null
+, DEPT_NAME varchar(50)
+, SALARY int);
+
+insert into employee values(101, 'Mohan', 'Admin', 4000);
+insert into employee values(102, 'Rajkumar', 'HR', 3000);
+insert into employee values(103, 'Akbar', 'IT', 4000);
+insert into employee values(104, 'Dorvin', 'Finance', 6500);
+insert into employee values(105, 'Rohit', 'HR', 3000);
+insert into employee values(106, 'Rajesh',  'Finance', 5000);
+insert into employee values(107, 'Preet', 'HR', 7000);
+insert into employee values(108, 'Maryam', 'Admin', 4000);
+insert into employee values(109, 'Sanjay', 'IT', 6500);
+insert into employee values(110, 'Vasudha', 'IT', 7000);
+insert into employee values(111, 'Melinda', 'IT', 8000);
+insert into employee values(112, 'Komal', 'IT', 10000);
+insert into employee values(113, 'Gautham', 'Admin', 2000);
+insert into employee values(114, 'Manisha', 'HR', 3000);
+insert into employee values(115, 'Chandni', 'IT', 4500);
+insert into employee values(116, 'Satya', 'Finance', 6500);
+insert into employee values(117, 'Adarsh', 'HR', 3500);
+insert into employee values(118, 'Tejaswi', 'Finance', 5500);
+insert into employee values(119, 'Cory', 'HR', 8000);
+insert into employee values(120, 'Monica', 'Admin', 5000);
+insert into employee values(121, 'Rosalin', 'IT', 6000);
+insert into employee values(122, 'Ibrahim', 'IT', 8000);
+insert into employee values(123, 'Vikram', 'IT', 8000);
+insert into employee values(124, 'Dheeraj', 'IT', 11000);
+
+select * from employee;
+```
+
+Solution:
+
+```sql
+with max_salary as (
+	select dept_name, max(salary)
+	from employee
+	group by dept_name
+), min_salary as (
+	select dept_name, min(salary)
+	from employee
+	group by dept_name
+)
+
+select
+	e.emp_id, e.emp_name, e.dept_name, e.salary,
+	case
+		when e.salary = mas.max then 'Highest Salary'
+		else 'Lowest Salary'
+	end as description
+from employee e, max_salary mas, min_salary mis
+where
+	e.dept_name = mas.dept_name and e.salary = mas.max or
+	e.dept_name = mis.dept_name and e.salary = mis.min
+order by e.dept_name, salary desc
+```
+
+## Exercise 4
+
+```sql
+-- Query 4:
+
+-- From the doctors table, fetch the details of doctors who work in the same hospital but in different speciality.
+
+--Table Structure:
+
+-- drop table doctors;
+create table doctors
+(
+id int primary key,
+name varchar(50) not null,
+speciality varchar(100),
+hospital varchar(50),
+city varchar(50),
+consultation_fee int
+);
+
+insert into doctors values
+(1, 'Dr. Shashank', 'Ayurveda', 'Apollo Hospital', 'Bangalore', 2500),
+(2, 'Dr. Abdul', 'Homeopathy', 'Fortis Hospital', 'Bangalore', 2000),
+(3, 'Dr. Shwetha', 'Homeopathy', 'KMC Hospital', 'Manipal', 1000),
+(4, 'Dr. Murphy', 'Dermatology', 'KMC Hospital', 'Manipal', 1500),
+(5, 'Dr. Farhana', 'Physician', 'Gleneagles Hospital', 'Bangalore', 1700),
+(6, 'Dr. Maryam', 'Physician', 'Gleneagles Hospital', 'Bangalore', 1500);
+```
+
+Solution:
+
+```sql
+select d1.id, d1.name, d1.speciality, d1.hospital, d1.city, d1.consultation_fee
+from doctors d1 join doctors d2 on d1.hospital = d2.hospital and d1.speciality != d2.speciality
+```
+
+## Exercise 5
+
+```sql
+-- Query 5:
+
+-- From the login_details table, fetch the users who logged in consecutively 3 or more times.
+
+--Table Structure:
+
+-- drop table login_details;
+create table login_details(
+login_id int primary key,
+user_name varchar(50) not null,
+login_date date);
+
+delete from login_details;
+insert into login_details values
+(101, 'Michael', current_date),
+(102, 'James', current_date),
+(103, 'Stewart', current_date+1),
+(104, 'Stewart', current_date+1),
+(105, 'Stewart', current_date+1),
+(106, 'Michael', current_date+2),
+(107, 'Michael', current_date+2),
+(108, 'Stewart', current_date+3),
+(109, 'Stewart', current_date+3),
+(110, 'James', current_date+4),
+(111, 'James', current_date+4),
+(112, 'James', current_date+5),
+(113, 'James', current_date+6);
+```
+
+Solution:
+
+```sql
+with l as (
+	select *, lag(user_name) over w as prev_user1, lag(user_name,2) over w as prev_user2
+	from login_details
+	window w as (order by login_date, login_id)
+)
+
+select *
+from l
+where user_name = prev_user1 and prev_user1 = prev_user2
+```
+
+Alternative solution:
+
+```sql
+with rep as (
+	select
+		*,
+		case
+			when lag(user_name) over (order by login_date) = user_name then 'repeat'
+			else 'not repeat'
+		end as rep
+	from login_details
+), cume_rep as (
+	select
+		*,
+		case
+			when rep = 'repeat' and lag(rep) over (order by login_date) = rep then 1
+			else 0
+		end as cume_rep
+	from rep
+)
+
+select *
+from cume_rep
+where cume_rep = 1
+```
+
 
 # 19. Misc Notes
 

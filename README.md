@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# SQL Bootcamp
+# SQL Bootcamp 2021 & Advanced Queries
 
 <!-- omit in toc -->
 ## Description
@@ -78,9 +78,19 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [15.4. Window Functions: Lead and Lag](#154-window-functions-lead-and-lag)
 - [16. SQL Window Function Part 2](#16-sql-window-function-part-2)
   - [16.1. First and Last Value](#161-first-and-last-value)
-- [17. Solutions to SQL Exercise](#17-solutions-to-sql-exercise)
-- [18. Misc Notes](#18-misc-notes)
-  - [18.1. Misc Notes from Revision](#181-misc-notes-from-revision)
+  - [16.2. Frame Clause](#162-frame-clause)
+  - [16.3. Windows Clause](#163-windows-clause)
+  - [16.4. N-th Value](#164-n-th-value)
+  - [16.5. Ntile](#165-ntile)
+  - [16.6. Cumulative Distribution Cume_Dist](#166-cumulative-distribution-cume_dist)
+  - [16.7. Percent Rank](#167-percent-rank)
+- [17. SQL With Clause and CTE (Common Table Expression) or Sub-Query Factoring](#17-sql-with-clause-and-cte-common-table-expression-or-sub-query-factoring)
+- [18. Practice Complex SQL Queries](#18-practice-complex-sql-queries)
+  - [18.1. Exercise 1:](#181-exercise-1)
+  - [18.2. Exercise 2](#182-exercise-2)
+- [19. Misc Notes](#19-misc-notes)
+  - [19.1. Misc Notes from Revision](#191-misc-notes-from-revision)
+- [20. Solutions to Codility Exercise](#20-solutions-to-codility-exercise)
 
 <!-- update number, TOC -->
 
@@ -2837,7 +2847,7 @@ window w as (partition by customer_id order by payment_date)
 
 ## 16.1. First and Last Value
 
-[Documentation on Window Functions](https://www.postgresql.org/docs/8.4/functions-window.html). Task: Write a query to display the most expensive product under each category (corresponding ot each record).
+From [SQL Window Function Part 2](https://www.youtube.com/watch?v=zAmJPdZu8Rg). [Documentation on Window Functions](https://www.postgresql.org/docs/8.4/functions-window.html). Task: Write a query to display the most expensive product under each category (corresponding ot each record).
 
 ```sql
 select p.*, first_value(product_name) over(partition by product_category order by price desc) as most_exp_per_category
@@ -2862,19 +2872,390 @@ having amount = max(amount)
 order by customer_id
 ```
 
-# 17. Solutions to SQL Exercise
+Task: Write a query to display the least expensive product under each category (corresponding to each record)
 
 ```sql
-select distinct(event_type), nth_value(delta, 1) over(partition by event_type) as value
-from
-	(select e.*, lag(value) over( partition by event_type order by time desc) - value as delta
-	from events e
-	order by event_type) delta
-where delta is not null
-order by event_type
+select *, last_value(product_name) over(partition by product_category order by price desc) as least_exp_product
+from product
 ```
 
-# 18. Misc Notes
+This delivers the wrong result! The reason is the default **frame clause**.
+
+## 16.2. Frame Clause
+
+Note that `first_value`, `last_value`, and `nth_value` consider only the rows within the "*window frame*", which by default contains the rows from the start of the partition through the last peer of the current row. This is likely to give unhelpful results for last_value and sometimes also nth_value. You can redefine the frame by adding a suitable frame specification (RANGE or ROWS) to the OVER clause. See Section 4.2.8 for more information about frame specifications. The default frame clause is:
+
+```sql
+select
+  p.*,
+  last_value(product_name) over(
+    partition by product_category
+    order by price desc
+    range between unbounded preceding and current row
+  )
+from product p
+```
+
+To use the `last_value` window function, we need to adjust the frame clause:
+
+```sql
+select
+  p.*,
+  last_value(product_name) over(
+    partition by product_category
+    order by price desc
+    range between unbounded preceding and unbounded following
+  )
+from product p
+```
+
+An alternative frame is the following:
+
+To use the `last_value` window function, we need to adjust the frame clause:
+
+```sql
+select
+  p.*,
+  last_value(product_name) over(
+    partition by product_category
+    order by price desc
+    rows between unbounded preceding and unbounded following
+  )
+from product p
+```
+
+This alternative becomes relevant when we have duplicates. `rows` considers the current row while `range` considers the last row of all duplicate values. We can also specify the number of rows:
+
+```sql
+select
+  p.*,
+  last_value(product_name) over(
+    partition by product_category
+    order by price desc
+    rows between 2 preceding and 2 following
+  )
+from product p
+```
+
+An example from our database:
+
+```sql
+-- fetch lowest amount per customer
+-- default frame: range between unbounded preceding and current row
+select
+	p.*,
+	-- first_value(payment_id) over(partition by customer_id order by amount desc) as highest_payment,
+	last_value(amount) over(
+		partition by customer_id
+		order by amount desc
+		range between unbounded preceding and unbounded following
+	) as lowest_payment
+from payment p
+-- order by amount
+```
+
+## 16.3. Windows Clause
+
+```sql
+select
+  *,
+  first_value(product_name) over w as most_exp_product,
+  last_value(product_name) over w as least_exp_product
+from product
+window w as (partition by product_category order by price desc range between unbounded preceding and unbounded following)
+-- order by
+```
+
+## 16.4. N-th Value
+
+Fetch a value from any particular position. Task: Write a query to display the second most expensive product under each category.
+
+```sql
+select
+  *,
+  nth_value(product_name, 2) over(partition by product_category order by price desc) as second_most_expensive
+from product
+```
+
+If the number of records is less that the parameter, the `nth_value` function will return `null`. This query won't display correctly for the first record (see `frame` clause above). We can fix this:
+
+```sql
+select
+  *,
+  nth_value(product_name, 2) over w as second_most_expensive
+from product
+window w as (partition by product_category order by price desc range between unbounded preceding and unbounded following)
+```
+## 16.5. Ntile
+
+Task: Write a query to segregate all the expensive phones, mid range and the cheaper phones.
+
+```sql
+with phone_bucket as (
+  select
+    *,
+    ntile(3) over w as bucket
+  from product
+  where product_category = 'Phone'
+)
+
+select
+  product_name,
+  case
+    when bucket = 1 then 'Expensive Phone'
+    when bucket = 2 then 'Mid Phone'
+    when bucket = 3 then 'Cheaper Phone'
+  end
+from phone_bucket
+```
+## 16.6. Cumulative Distribution Cume_Dist
+
+`cume_dist = sum (# of rows with the same value as the current row / # of rows)`
+
+Task: Write a query to fetch all products which are constituting the first 30% of the data in products table based on price -> write a query to fetch the top 30% products based on price.
+
+```sql
+select
+  *,
+  cume_dist() over (order by price desc) as cume_dist_by_price
+from product
+-- cast cume_dist() to numeric to use round function
+```
+
+We can clean up the table:
+
+```sql
+select
+  *,
+  round(cume_dist() over (order by price desc)::numeric*100,2) as cume_dist_by_price
+from product
+-- cast cume_dist() to numeric to use round function
+```
+
+We can then use this query as a subquery and filter our data:
+
+```sql
+with cume_dist_t as (
+  select
+    *,
+    round(cume_dist() over (order by price desc)::numeric*100,2) as cume_dist_by_price
+from product
+)
+
+select product_name, (cume_dist_by_price || '%') as cume_dist_pct
+from cume_dist_t
+where cume_dist_by_price <= 30
+```
+
+## 16.7. Percent Rank
+
+Similar to `cume_list`. Relative rank of the current row. `percent_rank = (# of current row - 1) / (# of rows -1)`
+
+Task: Write a query to identify how much percentage more expensive is the phone "Galaxy Z Fold 3" when compared to all products
+
+```sql
+select
+  *,
+  round(percent_rank() over(order by price)::numeric*100,2) as pct_rank
+from product
+```
+
+We use this as our subquery:
+
+```sql
+with pct_rank as (
+  select
+  *,
+  round(percent_rank() over(order by price)::numeric*100,2) as pct_rank
+  from product
+)
+
+select product_name, pct_rank
+from pct_rank
+where product_name = 'Galaxy Z Fold 3'
+```
+
+# 17. SQL With Clause and CTE (Common Table Expression) or Sub-Query Factoring
+
+From [SQL WITH Clause](https://www.youtube.com/watch?v=QNfnuK-1YYY&).
+
+Task: Find employees with a salary higher than the average.
+
+```sql
+with average_salary as (
+  select avg(salary)::int
+  from employee
+)
+
+select *
+from employee, average_salary
+where salary > average_salary
+```
+
+Task: Find stores with sales higher than the average across all stores.
+
+```sql
+-- find sales per store
+select store_id, sum(cost) as sales_per_store
+from sales
+group by store_id
+
+-- compute average revenue across all stores
+select round(avg(sales_per_store)::numeric, 2) as avg_sales
+from (
+  select store_id, sum(cost) as sales_per_store
+  from sales
+  group by store_id
+)
+
+-- filter by the comparisson average revenue < store revenue
+select *
+from (
+  select store_id, sum(cost) as sales_per_store
+  from sales
+  group by store_id
+) sales_per_store
+join (
+  select round(avg(sales_per_store)::numeric, 2) as avg_sales
+  from (
+    select store_id, sum(cost) as sales_per_store
+    from sales
+    group by store_id
+  ) sales_per_store
+) avg_sales
+on sales_per_store.sales_per_store > avg_sales.avg_sales
+```
+
+This query becomes:
+
+```sql
+with sales_per_store (store_id, sales_per_store) as (
+  select store_id, sum(cost) as sales_per_store
+  from sales
+  group by store_id
+), avg_sales (avg_sales) as (
+  select round(avg(sales_per_store)::numeric, 2) as avg_sales
+  from sales_per_store
+)
+
+select *
+where sales_per_store > avg_sales
+```
+
+Example from our database:
+
+```sql
+with revenue (customer_id, revenue) as (
+  select customer_id, rental_id * amount as revenue
+  from payment
+), revenue_per_store (customer_id, revenue_per_store) as (
+  select customer_id, sum(revenue) as revenue_per_store
+  from revenue
+  group by customer_id
+  order by customer_id
+), avg_revenue (avg_revenue) as (
+  select round(avg(revenue_per_store) :: numeric, 2) as avg_revenue
+  from revenue_per_store
+)
+
+select customer_id, revenue_per_store
+from revenue_per_store, avg_revenue
+where revenue_per_store > avg_revenue
+```
+
+# 18. Practice Complex SQL Queries
+
+From [Practice Complex SQL Queries](https://www.youtube.com/watch?v=FNYdBLwZ6cE).
+
+## 18.1. Exercise 1:
+
+```sql
+-- Query 1:
+ -- Write a SQL query to fetch all the duplicate records from a table.
+ --Tables Structure:
+
+create table users (user_id int primary key, user_name varchar(30) not null, email varchar(50));
+
+insert into users
+values (1, 'Sumit', 'sumit@gmail.com'),
+       (2, 'Reshma', 'reshma@gmail.com'),
+       (3, 'Farhana', 'farhana@gmail.com'),
+       (4, 'Robin', 'robin@gmail.com'),
+       (5, 'Robin', 'robin@gmail.com'),
+       (4, 'Robin', 'another_robin@gmail.com');
+
+
+select *
+from users;
+```
+
+Solutions:
+
+```sql
+select max(user_id), user_name, email
+from users
+group by user_name, email
+having count(user_name) > 1 and count(email) > 1
+```
+
+Solution from video: Use a window function with `row_number()`.
+
+```sql
+with rn_dups as (
+  select *, row_number() over(partition by user_name, email order by user_id) as rn
+  from users
+  order by user_id
+)
+
+select user_name, email, max(rn) as nr_of_dups
+from rn_dups
+where rn > 1
+group by user_name, email
+```
+
+## 18.2. Exercise 2
+
+```sql
+-- Query 2:
+-- Write a SQL query to fetch the second to last record from a employee table.
+
+--Tables Structure:
+-- drop table employee;
+create table employee
+( emp_ID int primary key
+, emp_NAME varchar(50) not null
+, DEPT_NAME varchar(50)
+, SALARY int);
+
+insert into employee values(101, 'Mohan', 'Admin', 4000);
+insert into employee values(102, 'Rajkumar', 'HR', 3000);
+insert into employee values(103, 'Akbar', 'IT', 4000);
+insert into employee values(104, 'Dorvin', 'Finance', 6500);
+insert into employee values(105, 'Rohit', 'HR', 3000);
+insert into employee values(106, 'Rajesh',  'Finance', 5000);
+insert into employee values(107, 'Preet', 'HR', 7000);
+insert into employee values(108, 'Maryam', 'Admin', 4000);
+insert into employee values(109, 'Sanjay', 'IT', 6500);
+insert into employee values(110, 'Vasudha', 'IT', 7000);
+insert into employee values(111, 'Melinda', 'IT', 8000);
+insert into employee values(112, 'Komal', 'IT', 10000);
+insert into employee values(113, 'Gautham', 'Admin', 2000);
+insert into employee values(114, 'Manisha', 'HR', 3000);
+insert into employee values(115, 'Chandni', 'IT', 4500);
+insert into employee values(116, 'Satya', 'Finance', 6500);
+insert into employee values(117, 'Adarsh', 'HR', 3500);
+insert into employee values(118, 'Tejaswi', 'Finance', 5500);
+insert into employee values(119, 'Cory', 'HR', 8000);
+insert into employee values(120, 'Monica', 'Admin', 5000);
+insert into employee values(121, 'Rosalin', 'IT', 6000);
+insert into employee values(122, 'Ibrahim', 'IT', 8000);
+insert into employee values(123, 'Vikram', 'IT', 8000);
+insert into employee values(124, 'Dheeraj', 'IT', 11000);
+
+select * from employee;
+```
+
+# 19. Misc Notes
 
 - [SQL Cheat Sheet](https://www.sqltutorial.org/wp-content/uploads/2016/04/SQL-cheat-sheet.pdf):
   - `limit` n `offset` m: skip m row and return the next n rows.
@@ -2918,7 +3299,7 @@ WHERE schemaname != 'pg_catalog' AND
 - [Delete duplicate records](https://stackoverflow.com/questions/6583916/delete-duplicate-rows-from-small-table)
 - [Creating multiple tables with sqlite3](https://gist.github.com/iampramodyadav/793ec2b0ea71c3bcbfd6deea636907e2)
 
-## 18.1. Misc Notes from Revision
+## 19.1. Misc Notes from Revision
 
 - `not` keyword appears before the condition
 - `order by`-columns also appears in `select`-column
@@ -2930,3 +3311,41 @@ WHERE schemaname != 'pg_catalog' AND
   - `select` OR
   - `having`
 
+# 20. Solutions to Codility Exercise
+
+```sql
+select distinct(event_type), nth_value(delta, 1) over(partition by event_type) as value
+from
+	(select e.*, lag(value) over( partition by event_type order by time desc) - value as delta
+	from events e
+	order by event_type) delta
+where delta is not null
+order by event_type
+```
+
+Alternative (since we remove the null values with the `where` clause and parameter of nth_value is 1):
+
+```sql
+select distinct(event_type), first_value(delta) over(partition by event_type) as value
+from
+	(select e.*, lag(value) over( partition by event_type order by time desc) - value as delta
+	from events e
+	order by event_type) delta
+where delta is not null
+order by event_type
+```
+
+Alternative with `with` as syntactic convenience to make the query more readable.
+
+```sql
+with delta as (
+  select e.*, lag(value) over( partition by event_type order by time desc) - value as delta
+  from events e
+	order by event_type
+)
+
+select distinct(event_type), first_value(delta) over(partition by event_type) as value
+from delta
+where delta is not null
+order by event_type
+```

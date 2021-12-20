@@ -88,9 +88,12 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
 - [18. Practice Complex SQL Queries](#18-practice-complex-sql-queries)
   - [18.1. Exercise 1](#181-exercise-1)
   - [18.2. Exercise 2](#182-exercise-2)
-  - [Exercise 3](#exercise-3)
-  - [Exercise 4](#exercise-4)
-  - [Exercise 5](#exercise-5)
+  - [18.3. Exercise 3](#183-exercise-3)
+  - [18.4. Exercise 4](#184-exercise-4)
+  - [18.5. Exercise 5](#185-exercise-5)
+  - [Exercise 6](#exercise-6)
+  - [Exercise 7](#exercise-7)
+  - [Exercise 9](#exercise-9)
 - [19. Misc Notes](#19-misc-notes)
   - [19.1. Misc Notes from Revision](#191-misc-notes-from-revision)
 - [20. Solutions to Codility Exercise](#20-solutions-to-codility-exercise)
@@ -2629,7 +2632,8 @@ We imported twice so we deleted duplicates with:
 delete from simple ls using(
 	select min(ctid) as ctid ,id
 	from simple
-	group by id having count(*)>1
+	group by id
+  having count(*)>1
 ) rs
 where ls.id = rs.id
 and ls.ctid <> rs.ctid
@@ -3271,7 +3275,7 @@ from rn
 where rn = 2
 ```
 
-## Exercise 3
+## 18.3. Exercise 3
 
 ```sql
 -- Query 3:
@@ -3341,7 +3345,7 @@ where
 order by e.dept_name, salary desc
 ```
 
-## Exercise 4
+## 18.4. Exercise 4
 
 ```sql
 -- Query 4:
@@ -3377,7 +3381,7 @@ select d1.id, d1.name, d1.speciality, d1.hospital, d1.city, d1.consultation_fee
 from doctors d1 join doctors d2 on d1.hospital = d2.hospital and d1.speciality != d2.speciality
 ```
 
-## Exercise 5
+## 18.5. Exercise 5
 
 ```sql
 -- Query 5:
@@ -3399,7 +3403,7 @@ insert into login_details values
 (103, 'Stewart', current_date+1),
 (104, 'Stewart', current_date+1),
 (105, 'Stewart', current_date+1),
-(106, 'Michael', current_date+2),
+(106, 'Jimmy', current_date+2),
 (107, 'Michael', current_date+2),
 (108, 'Stewart', current_date+3),
 (109, 'Stewart', current_date+3),
@@ -3449,6 +3453,238 @@ from cume_rep
 where cume_rep = 1
 ```
 
+Better alternative solution. This solution also counts the number of consecutive logins by the user.
+
+```sql
+with rep as (
+	select
+		*,
+		case
+			when lag(user_name) over(order by login_date) = user_name then 1
+			else 0
+		end as rep
+	from login_details
+), island_head as (
+	select
+		*,
+		case
+			when
+				rep = 0 and lead(rep) over(order by login_date) = 1 then login_id
+		end as island_head
+	from rep
+), island_id as(
+	select
+		*,
+		case
+			when rep = 1 then max(island_head) over(order by login_date)
+			when rep = 0 then island_head
+		end as island_id
+	from island_head
+)
+
+select
+	*,
+	count(island_id) over(partition by island_id order by login_date rows between unbounded preceding and unbounded following)
+from island_id
+order by login_date, island_head
+```
+
+To make the result set more compact:
+
+```sql
+with rep as (
+	select
+		*,
+		case
+			when lag(user_name) over(order by login_date) = user_name then 1
+			else 0
+		end as rep
+	from login_details
+), island_head as (
+	select
+		*,
+		case
+			when
+				rep = 0 and lead(rep) over(order by login_date) = 1 then login_id
+		end as island_head
+	from rep
+), island_id as(
+	select
+		*,
+		case
+			when rep = 1 then max(island_head) over(order by login_date)
+			when rep = 0 then island_head
+		end as island_id
+	from island_head
+), island as(
+	select
+		*,
+		count(island_id) over(partition by island_id order by login_date rows between unbounded preceding and unbounded following) as consecutive_logins
+	from island_id
+)
+
+select  island_id, consecutive_logins, user_name
+from island
+where consecutive_logins != 0
+group by island_id, consecutive_logins, user_name
+order by island_id
+```
+
+## Exercise 6
+
+```sql
+-- Query 6:
+-- From the students table, write a SQL query to interchange the adjacent student names.
+-- Note: If there are no adjacent student then the student name should stay the same.
+--Table Structure:
+
+-- drop table students;
+create table students
+(
+id int primary key,
+student_name varchar(50) not null
+);
+insert into students values
+(1, 'James'),
+(2, 'Michael'),
+(3, 'George'),
+(4, 'Stewart'),
+(5, 'Robin');
+
+-- select * from students;
+```
+
+Solution:
+
+```sql
+select
+	*,
+	case
+		when id % 2 = 1 then lead(student_name,1,student_name) over()
+		when id % 2 = 0 then lag(student_name,1,student_name) over()
+	end as new_student_name
+from students
+```
+
+## Exercise 7
+
+```sql
+-- Query 7:
+-- From the weather table, fetch all the records when London had extremely cold temperature for 3 consecutive days or more.
+-- Note: Weather is considered to be extremely cold then its temperature is less than zero.
+
+--Table Structure:
+-- drop table weather;
+create table weather
+(
+id int,
+city varchar(50),
+temperature int,
+day date
+);
+delete from weather;
+insert into weather values
+(1, 'London', -1, to_date('2021-01-01','yyyy-mm-dd')),
+(2, 'London', -2, to_date('2021-01-02','yyyy-mm-dd')),
+(3, 'London', 4, to_date('2021-01-03','yyyy-mm-dd')),
+(4, 'London', 1, to_date('2021-01-04','yyyy-mm-dd')),
+(5, 'London', -2, to_date('2021-01-05','yyyy-mm-dd')),
+(6, 'London', -5, to_date('2021-01-06','yyyy-mm-dd')),
+(7, 'London', -7, to_date('2021-01-07','yyyy-mm-dd')),
+(8, 'London', 5, to_date('2021-01-08','yyyy-mm-dd'));
+
+-- select * from weather;
+```
+
+Solution:
+
+```sql
+with
+streak as (
+  select *,
+	case
+		when temperature < 0 and lag(temperature) over (order by id) >= 0 then id -- head (does consider first record)
+		when temperature < 0 and lead(temperature) over (order by id) < 0 then 1 -- body
+		when temperature < 0 and lead(temperature) over (order by id) >= 0 then 1 -- tail
+		when temperature < 0 then 1 --handles the last record
+	end as streak
+  from weather),
+island_id as (
+	select
+		*,
+		case
+			when streak is not null then max(streak) over(order by id)
+		end as island_id
+		from streak),
+island_size as (
+	select
+		*,
+		count(island_id) over(partition by island_id order by id rows between unbounded preceding and unbounded following) as island_size
+	from island_id
+)
+
+select id, city, temperature, day, island_size
+from island_size
+where island_size >= 3
+order by id
+```
+
+## Exercise 9
+
+We skipped exercise 9 because the task was not clear.
+
+```sql
+-- Query 9:
+-- Find the top 2 accounts with the maximum number of unique patients on a monthly basis.
+-- Note: Prefer the account if with the least value in case of same number of unique patients
+
+--Table Structure:
+
+-- drop table patient_logs;
+create table patient_logs
+(
+  account_id int,
+  date date,
+  patient_id int
+);
+
+insert into patient_logs values (1, to_date('02-01-2020','dd-mm-yyyy'), 100);
+insert into patient_logs values (1, to_date('27-01-2020','dd-mm-yyyy'), 200);
+insert into patient_logs values (2, to_date('01-01-2020','dd-mm-yyyy'), 300);
+insert into patient_logs values (2, to_date('21-01-2020','dd-mm-yyyy'), 400);
+insert into patient_logs values (2, to_date('21-01-2020','dd-mm-yyyy'), 300);
+insert into patient_logs values (2, to_date('01-01-2020','dd-mm-yyyy'), 500);
+insert into patient_logs values (3, to_date('20-01-2020','dd-mm-yyyy'), 400);
+insert into patient_logs values (1, to_date('04-03-2020','dd-mm-yyyy'), 500);
+insert into patient_logs values (3, to_date('20-01-2020','dd-mm-yyyy'), 450);
+
+select * from patient_logs;
+```
+
+Solution:
+
+```sql
+with dp as
+  (select distinct to_char(date, 'month') as month,
+                   account_id,
+                   patient_id
+   from patient_logs
+   order by month),
+     c as
+  (select month,
+          account_id,
+          count(account_id) as c
+   from dp
+   group by month, account_id),
+     r as
+  (select *,
+          rank() over(partition by month order by c desc, account_id) as rnk
+   from c)
+select *
+from r
+where rnk < 3
+order by month, rnk
+```
 
 # 19. Misc Notes
 

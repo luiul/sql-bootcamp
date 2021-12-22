@@ -60,7 +60,7 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [10.7. DELETE Statement (RECORD)](#107-delete-statement-record)
   - [10.8. ALTER TABLE Statement (TABLE AND COLUMN)](#108-alter-table-statement-table-and-column)
     - [10.8.1. RENAME, ADD, DROP, SET Statements (TABLE AND COLUMN)](#1081-rename-add-drop-set-statements-table-and-column)
-    - [10.8.2. DROP (TABLE) Statement (COLUMN)](#1082-drop-table-statement-column)
+    - [10.8.2. DROP Statement (COLUMN)](#1082-drop-statement-column)
   - [10.9. CHECK Constraint](#109-check-constraint)
 - [11. Assessment Test 3](#11-assessment-test-3)
 - [12. Conditional Expressions and Procedures](#12-conditional-expressions-and-procedures)
@@ -91,9 +91,9 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [18.3. Exercise 3](#183-exercise-3)
   - [18.4. Exercise 4](#184-exercise-4)
   - [18.5. Exercise 5](#185-exercise-5)
-  - [Exercise 6](#exercise-6)
-  - [Exercise 7](#exercise-7)
-  - [Exercise 9](#exercise-9)
+  - [18.6. Exercise 6](#186-exercise-6)
+  - [18.7. Exercise 7](#187-exercise-7)
+  - [18.8. Exercise 9](#188-exercise-9)
 - [19. Misc Notes](#19-misc-notes)
   - [19.1. Misc Notes from Revision](#191-misc-notes-from-revision)
 - [20. Solutions to Codility Exercise](#20-solutions-to-codility-exercise)
@@ -1956,7 +1956,7 @@ create table job(
 ```
 
 ```sql
-create table account_jo(
+create table account_job(
  user_id int references account(user_id),
  -- serial should be only used as a primary key for the table it is in
  job_id int references job(job_id),
@@ -2082,7 +2082,7 @@ from account as a
 returning *
 ```
 
-**Note**: Be careful when updating records in a table! Notice the `wher` clause in the `update` statement. The `where` clause specifies which record(s) should be updated. If you omit the `where` clause, all records in the table will be updated!
+**Note**: Be careful when updating records in a table! Notice the `where` clause in the `update` statement. The `where` clause specifies which record(s) should be updated. If you omit the `where` clause, all records in the table will be updated!
 
 ## 10.7. DELETE Statement (RECORD)
 
@@ -2162,7 +2162,7 @@ alter column ppl drop not null
 
 To alter unique constraint see [here](https://www.w3schools.com/sql/sql_unique.asp).
 
-### 10.8.2. DROP (TABLE) Statement (COLUMN)
+### 10.8.2. DROP Statement (COLUMN)
 
 `drop` allows for the complete removal of a column in a table. In PostgreSQL this will also automatically remove all of its indexes and constraints involving the column. However, it will not remove columns used in views, triggers, or stored procedures without the additional `cascade` clause. General syntax:
 
@@ -3227,7 +3227,7 @@ group by user_name, email
 -- Write a SQL query to fetch the second record from a employee table.
 
 --Tables Structure:
--- drop table employee;
+-- drop table if exists employee;
 create table employee
 ( emp_ID int primary key
 , emp_NAME varchar(50) not null
@@ -3284,7 +3284,7 @@ where rn = 2
 
 --Tables Structure:
 
-drop table employee;
+-- drop table if exists employee;
 create table employee
 ( emp_ID int primary key
 , emp_NAME varchar(50) not null
@@ -3354,7 +3354,7 @@ order by e.dept_name, salary desc
 
 --Table Structure:
 
--- drop table doctors;
+-- drop table if exists doctors;
 create table doctors
 (
 id int primary key,
@@ -3390,7 +3390,7 @@ from doctors d1 join doctors d2 on d1.hospital = d2.hospital and d1.speciality !
 
 --Table Structure:
 
--- drop table login_details;
+-- drop table if exists login_details;
 create table login_details(
 login_id int primary key,
 user_name varchar(50) not null,
@@ -3530,7 +3530,7 @@ group by island_id, consecutive_logins, user_name
 order by island_id
 ```
 
-## Exercise 6
+## 18.6. Exercise 6
 
 ```sql
 -- Query 6:
@@ -3538,7 +3538,7 @@ order by island_id
 -- Note: If there are no adjacent student then the student name should stay the same.
 --Table Structure:
 
--- drop table students;
+-- drop table if exists students;
 create table students
 (
 id int primary key,
@@ -3566,7 +3566,7 @@ select
 from students
 ```
 
-## Exercise 7
+## 18.7. Exercise 7
 
 ```sql
 -- Query 7:
@@ -3574,7 +3574,7 @@ from students
 -- Note: Weather is considered to be extremely cold then its temperature is less than zero.
 
 --Table Structure:
--- drop table weather;
+-- drop table if exists weather;
 create table weather
 (
 id int,
@@ -3629,7 +3629,7 @@ where island_size >= 3
 order by id
 ```
 
-## Exercise 9
+## 18.8. Exercise 9
 
 We skipped exercise 9 because the task was not clear.
 
@@ -3640,7 +3640,7 @@ We skipped exercise 9 because the task was not clear.
 
 --Table Structure:
 
--- drop table patient_logs;
+-- drop table if exists patient_logs;
 create table patient_logs
 (
   account_id int,

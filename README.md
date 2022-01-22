@@ -95,7 +95,8 @@ A **database** is a collection of tables. **Tables** contain rows and columns, w
   - [18.7. Exercise 7](#187-exercise-7)
   - [18.8. Exercise 9](#188-exercise-9)
 - [19. Misc Notes](#19-misc-notes)
-  - [19.1. Misc Notes from Revision](#191-misc-notes-from-revision)
+  - [19.1. General Syntax](#191-general-syntax)
+  - [19.2. Misc Notes from Revision](#192-misc-notes-from-revision)
 - [20. Solutions to Codility Exercise](#20-solutions-to-codility-exercise)
 
 <!-- update number, TOC -->
@@ -454,7 +455,7 @@ where first_name ilike 'j%' and last_name ilike 's%'
 -- look for customers with a first name that starts with 'j' and a last name that starts with 's' (case-insensitive)
 ```
 
-`%` can be black too, `_`cannot be blank. Example:
+`%` can be blank too, `_`cannot be blank. Example:
 
 ```sql
 select * from customer
@@ -572,7 +573,26 @@ select round(avg(replacement_cost),2) from film
 Additionally, we can determine statistics in ordered sets with ordered-set aggregate functions using the keyword `within group`.
 
 ```sql
-select min(replacement_cost), percentile_disc(0.5) within group(order by replacement_cost), round(avg(replacement_cost),2), max(replacement_cost), mode() within group(order by replacement_cost)
+select
+    min(replacement_cost),
+    percentile_disc(0.25) within group(
+        order by
+            replacement_cost
+    ) as "25p",
+    percentile_disc(0.5) within group(
+        order by
+            replacement_cost
+    ) as median,
+    round(avg(replacement_cost), 2) as avg,
+    percentile_disc(0.75) within group(
+        order by
+            replacement_cost
+    ) as "75p",
+    max(replacement_cost),
+    mode() within group(
+        order by
+            replacement_cost
+    )
 from film
 ```
 
@@ -606,10 +626,22 @@ group by company, division
 Another example from our database:
 
 ```sql
-select rental_duration, rating, round(avg(replacement_cost),2), percentile_disc(0.5) within group(order by replacement_cost)
-from film
-group by rental_duration, rating
-order by rental_duration, rating
+select
+    rental_duration,
+    rating,
+    round(avg(replacement_cost), 2) as avg_replacement_cost,
+    percentile_disc(0.5) within group(
+        order by
+            replacement_cost
+    ) as median_replacement_cost
+from
+    film
+group by
+    rental_duration,
+    rating
+order by
+    rental_duration,
+    rating 
 -- return the average and median replacement cost per rental duration per rating
 ```
 
@@ -634,6 +666,33 @@ group by rating
 order by rating
 -- returns average and median replacement cost for the ratings R and NC-17
 ```
+
+An example using `where` and `having`: 
+
+```sql 
+select
+    rental_duration,
+    rating,
+    round(avg(replacement_cost), 2) as avg_replacement_cost,
+    percentile_disc(0.5) within group(
+        order by
+            replacement_cost
+    ) as median_replacement_cost
+from
+    film
+where 
+	rating in ('R','NC-17')
+group by
+    rental_duration,
+    rating
+having 
+	round(avg(replacement_cost), 2) > 19
+order by
+    rental_duration,
+    rating
+-- returns the average and median replacement cost per rental duration per rating where the rating is R or NC-17 and the average replacement cost is greater than 19
+```
+
 
 If we want to sort results based on the aggregate, we must reference the entire function. Example:
 
@@ -666,12 +725,64 @@ order by sum(amount) desc
 limit 5
 ```
 
+Alternative: 
+
+```sql
+with top_customer as (
+    select
+        customer_id,
+        sum(amount) as s_amount
+    from
+        payment -- where 
+    group by
+        customer_id -- having
+    order by
+        sum(amount) desc
+    limit
+        5
+)
+select
+    t.customer_id,
+    first_name,
+    last_name,
+    s_amount
+from
+    top_customer as t
+    join customer as c on t.customer_id = c.customer_id
+```
+
 We want to find out how many transaction occurred per customer:
 
 ```sql
 select customer_id, count(amount) from payment
 group by customer_id
 order by count(amount) desc
+```
+
+Alternative
+
+```sql 
+with tx_count as (
+    select
+        customer_id,
+        count(payment_id) as tx_count
+    from
+        payment
+    group by
+        customer_id
+)
+select
+    t.customer_id,
+    first_name,
+    last_name,
+    tx_count
+from
+    tx_count as t
+    join customer as c on t.customer_id = c.customer_id
+order by
+    tx_count desc
+limit
+    5
 ```
 
 We want to find out the sum amount per customer per staff member:
@@ -739,6 +850,32 @@ order by sum(amount) desc
 limit 5
 ```
 
+Alternative: 
+
+```sql
+with c_sum as (
+    select
+        customer_id,
+        sum(amount)
+    from
+        payment
+    group by
+        customer_id
+    limit
+        5
+)
+select
+    c.customer_id,
+    first_name,
+    last_name,
+    sum
+from
+    c_sum as c
+    join customer as u on c.customer_id = u.customer_id
+order by
+    sum desc
+```
+
 ## 5.3. HAVING Clause
 
 The `having` clause allows us to filter after an aggregation has already taken place. Example:
@@ -795,11 +932,19 @@ having count(*) >= 40
 **Challenge**: What are the customer ids of customers who have spent more than $100 in payment transactions with our staff_id member 2?
 
 ```sql
-select staff_id, customer_id, sum(amount)
-from payment
-where staff_id = 2
-group by staff_id, customer_id
-having sum(amount) > 100
+select
+    customer_id,
+    sum(amount)
+from
+    payment
+where
+    staff_id = 2
+group by
+    customer_id
+having
+    sum(amount) > 100
+order by
+    sum(amount) desc
 ```
 
 # 6. Assessment Test 1
@@ -1051,6 +1196,23 @@ where inventory.film_id is null
 -- this returns the films that are in our films table but not in our inventory
 ```
 
+Alternative: 
+
+```sql 
+select
+    distinct f.film_id,
+    f.title
+from
+    film as f full
+    outer join inventory as i on f.film_id = i.film_id
+where
+    i.film_id is null
+order by
+    f.film_id asc
+```
+
+
+
 Alternative to example:
 
 ```sql
@@ -1122,7 +1284,7 @@ select c_1,...,c_n from t2
 
 ## 7.7. JOIN Challenges
 
-**Challenge**: California sales tax laws have changed and we need to alert our customers to this through email. What are the emails of the customers who live in California?
+**Challenge**: California sales tax laws have changed and we need to alert our customers of this through email. What are the emails of the customers who live in California?
 
 ```sql
 -- task: what are the emails of the customers that live in California
@@ -1191,7 +1353,7 @@ Section Overview:
 
 ### 8.1.1. Displaying Current Time Information
 
-In Part One, we will go over a few commands that report back time and date information. These will be more useful when creating our own tables and databases, rather than when querying a database.
+In Part One, we will go over a few commands that report back time and date information. These will be more useful when creating our own tables and databases, rather than querying a database.
 
 We've already seen that PostgreSQL can hold date and time information:
 
@@ -2415,24 +2577,51 @@ order by rental_rate
 
 We can reformat the results of the query above with the `case` statement:
 
--- we can perform opeartions on the results of the case statements
-
 ```sql
 select
-sum(case rental_rate
- when 0.99 then 1
- else 0
-end) as bargains,
-sum(case rental_rate
- when 2.99 then 1
- else 0
-end) as regular,
-sum(case rental_rate
- when 4.99 then 1
- else 0
-end) as premium
-from film
+    sum(
+        case
+            rental_rate
+            when 0.99 then 1
+            else 0
+        end
+    ) as bargains,
+    sum(
+        case
+            rental_rate
+            when 2.99 then 1
+            else 0
+        end
+    ) as regular,
+    sum(
+        case
+            rental_rate
+            when 4.99 then 1
+            else 0
+        end
+    ) as premium
+from
+    film
 ```
+
+Alternative: 
+
+```sql 
+select
+    case
+        rental_rate
+        when 0.99 then 'bargains'
+        when 2.99 then 'regular'
+        when 4.99 then 'premium'
+    end as tier,
+    rental_rate,
+    count(*)
+from
+    film
+group by
+    rental_rate
+```
+
 
 **Challenge**: We want to know and compare the various amounts of films we have per movie rating. Use `case` and the dvdrental database:
 
@@ -2464,6 +2653,14 @@ select
   else 0
   end ) as r
 from film
+```
+
+Better option: 
+
+```sql 
+select rating, count(*)
+from film
+group by rating
 ```
 
 ## 12.2. COALESCE() Function
@@ -3730,7 +3927,26 @@ WHERE schemaname != 'pg_catalog' AND
 - [Delete duplicate records](https://stackoverflow.com/questions/6583916/delete-duplicate-rows-from-small-table)
 - [Creating multiple tables with sqlite3](https://gist.github.com/iampramodyadav/793ec2b0ea71c3bcbfd6deea636907e2)
 
-## 19.1. Misc Notes from Revision
+## 19.1. General Syntax
+
+```sql 
+select
+	count distinct
+from 
+where
+	=<> 
+	is null
+	in ()
+	between x and y 
+	like 
+	ilike
+group by 
+having 
+order by 
+limit 
+```
+
+## 19.2. Misc Notes from Revision
 
 - `not` keyword appears before the condition
 - `order by`-columns also appears in `select`-column

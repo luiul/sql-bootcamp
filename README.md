@@ -4,9 +4,9 @@
 <!-- omit in toc -->
 ## Description
 
-Databases are systems that allow users to store and organize data and are useful when dealing with large amounts of data. On the other hand, spreadsheets are good for one-time analysis, quickly need to chart something, reasonable data set size, and the ability for untrained people to work with data.
+Databases are systems that allow users to store and organize data and are useful when dealing with large amounts of data. On the other hand, spreadsheets are suitable for one-time analysis, quick charts, reasonable datasets, and allowing untrained people to work with data.
 
-Databases are good for data integrity, they can handle massive amounts of data, quickly combine different datasets, automate steps of re-use, and can support data for websites and applications.
+Databases are suitable for data integrity, handling large amounts of data, combining different datasets quickly, automating reuse steps, and supporting data for websites and applications.
 
 A **database** is a collection of tables. **Tables** contain rows and columns, where the **rows** are known as **records** and the **columns** are known as **fields**. A **column** is a set of data values of a particular type, one value for each row of the database. A **row** represents a single data item in a table, and every row in the table has the same structure.
 
@@ -196,7 +196,7 @@ We install and use the following applications.
 
 - [PostgreSQL](https://www.postgresql.org/): SQL Engine that stores data and reads queries and returns information
 - [PgAdmin](https://www.pgadmin.org/): graphical User Interface for connecting with PostgreSQL
-- Restore the provided database with the `.tar` file.
+- Restore the provided database using the `.tar` file in the repo [here](https://github.com/luiul/sql-bootcamp/blob/main/database-restore/dvdrental.tar). 
 - VS Code: source-code editor. We use VS Code as a scratch pad and for general note taking.
 
 Go to Servers > PostgreSQL 12 > Databases > dvdrental > Schemas > Tables to see the tables in the restored database.
